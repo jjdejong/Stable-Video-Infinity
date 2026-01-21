@@ -9,9 +9,11 @@ from diffsynth.utils.data import save_video
 from diffsynth.pipelines.wan_video_svi_pro import WanVideoSviProPipeline, ModelConfig
 
 class StreamingVideoProcessor:
-    def __init__(self, lora_path_high="",lora_path_low="", use_anchor=False, seed_multiplier=123, num_motion_frame=1,num_motion_latent=2, num_overlap_frame=1, cfg_scale=7.0):
+    def __init__(self, lora_path_high="",lora_path_low="", extra_loras_high=None, extra_loras_low=None, use_anchor=False, seed_multiplier=123, num_motion_frame=1,num_motion_latent=2, num_overlap_frame=1, cfg_scale=7.0):
         self.lora_path_high = lora_path_high
         self.lora_path_low = lora_path_low
+        self.extra_loras_high = extra_loras_high or []  # List of (path, alpha) tuples
+        self.extra_loras_low = extra_loras_low or []    # List of (path, alpha) tuples
         self.pipe = None
         self.initialize_pipeline()
         
@@ -44,6 +46,15 @@ class StreamingVideoProcessor:
         self.pipe.load_lora(self.pipe.dit, self.lora_path_high, alpha=1)
         self.pipe.load_lora(self.pipe.dit2, self.lora_path_low, alpha=1)
 
+        # Load additional chained LoRAs for high-noise model (dit)
+        for lora_path, alpha in self.extra_loras_high:
+            print(f"Loading extra LoRA for high-noise model: {lora_path} (alpha={alpha})")
+            self.pipe.load_lora(self.pipe.dit, lora_path, alpha=alpha)
+
+        # Load additional chained LoRAs for low-noise model (dit2)
+        for lora_path, alpha in self.extra_loras_low:
+            print(f"Loading extra LoRA for low-noise model: {lora_path} (alpha={alpha})")
+            self.pipe.load_lora(self.pipe.dit2, lora_path, alpha=alpha)
 
         print("Pipeline initialized successfully!")
     
@@ -148,6 +159,31 @@ class StreamingVideoProcessor:
         
         return final_output
 
+def parse_extra_loras(loras_str):
+    """Parse extra LoRAs string format 'path1:alpha1,path2:alpha2' into list of (path, alpha) tuples."""
+    if not loras_str or loras_str.strip() == "":
+        return []
+
+    result = []
+    for item in loras_str.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if ":" in item:
+            path, alpha_str = item.rsplit(":", 1)
+            try:
+                alpha = float(alpha_str)
+            except ValueError:
+                # If alpha parsing fails, treat the whole thing as path with default alpha
+                path = item
+                alpha = 1.0
+        else:
+            path = item
+            alpha = 1.0
+        result.append((path, alpha))
+    return result
+
+
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Streaming Video Generation with WanVideo")
@@ -170,6 +206,18 @@ def main():
         type=str,
         default="none",
         help="Path to the low noise LoRA model file"
+    )
+    parser.add_argument(
+        "--extra_loras_high",
+        type=str,
+        default="",
+        help="Additional LoRAs for high-noise model (dit). Format: 'path1:alpha1,path2:alpha2' e.g. 'lightx2v.safetensors:0.8,style.safetensors:0.5'"
+    )
+    parser.add_argument(
+        "--extra_loras_low",
+        type=str,
+        default="",
+        help="Additional LoRAs for low-noise model (dit2). Format: 'path1:alpha1,path2:alpha2' e.g. 'lightx2v.safetensors:0.8'"
     )
 
     parser.add_argument(
@@ -258,18 +306,29 @@ def main():
         help="CFG scale for classifier-free guidance (default: 5.0)"
     )
     args = parser.parse_args()
-    
+
+    # Parse extra LoRAs
+    extra_loras_high = parse_extra_loras(args.extra_loras_high)
+    extra_loras_low = parse_extra_loras(args.extra_loras_low)
+
+    if extra_loras_high:
+        print(f"Extra LoRAs for high-noise model: {extra_loras_high}")
+    if extra_loras_low:
+        print(f"Extra LoRAs for low-noise model: {extra_loras_low}")
+
     # Create output directory
     os.makedirs(args.output_root, exist_ok=True)
-    
+
     # Initialize processor
     processor = StreamingVideoProcessor(
         lora_path_high=args.lora_path_high,
         lora_path_low=args.lora_path_low,
+        extra_loras_high=extra_loras_high,
+        extra_loras_low=extra_loras_low,
         use_anchor=True,
-        seed_multiplier=args.seed_multiplier, 
-        num_motion_frame=args.num_motion_frame, 
-        num_motion_latent=args.num_motion_latent, 
+        seed_multiplier=args.seed_multiplier,
+        num_motion_frame=args.num_motion_frame,
+        num_motion_latent=args.num_motion_latent,
         num_overlap_frame=args.num_overlap_frame,
         cfg_scale=args.cfg_scale,
         )
