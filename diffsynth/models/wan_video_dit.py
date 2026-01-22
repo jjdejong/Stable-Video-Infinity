@@ -29,31 +29,34 @@ except ModuleNotFoundError:
 def chunked_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, chunk_size: int = 1024):
     """
     Memory-efficient attention that processes queries in chunks.
-    q, k, v: [batch, heads, seq_len, head_dim]
-    Returns: [batch, heads, seq_len, head_dim]
+    q: [batch, heads, q_seq_len, head_dim]
+    k, v: [batch, heads, kv_seq_len, head_dim]
+    Returns: [batch, heads, q_seq_len, head_dim]
     """
-    batch, heads, seq_len, head_dim = q.shape
+    batch, heads, q_seq_len, head_dim = q.shape
+    _, _, kv_seq_len, _ = k.shape
     scale = head_dim ** -0.5
 
-    # If sequence is small enough, use standard attention
-    if seq_len <= chunk_size:
+    # If sequences are small enough, use standard attention
+    if q_seq_len <= chunk_size and kv_seq_len <= chunk_size:
         return F.scaled_dot_product_attention(q, k, v)
 
     # Process queries in chunks
     output = torch.zeros_like(q)
 
-    for i in range(0, seq_len, chunk_size):
-        end_i = min(i + chunk_size, seq_len)
+    for i in range(0, q_seq_len, chunk_size):
+        end_i = min(i + chunk_size, q_seq_len)
         q_chunk = q[:, :, i:end_i, :]
+        q_chunk_len = end_i - i
 
         # Compute attention for this chunk against all keys
         # Using numerically stable chunked softmax
         chunk_output = torch.zeros_like(q_chunk)
-        chunk_max = torch.full((batch, heads, end_i - i, 1), float('-inf'), device=q.device, dtype=q.dtype)
-        chunk_sum = torch.zeros((batch, heads, end_i - i, 1), device=q.device, dtype=q.dtype)
+        chunk_max = torch.full((batch, heads, q_chunk_len, 1), float('-inf'), device=q.device, dtype=q.dtype)
+        chunk_sum = torch.zeros((batch, heads, q_chunk_len, 1), device=q.device, dtype=q.dtype)
 
-        for j in range(0, seq_len, chunk_size):
-            end_j = min(j + chunk_size, seq_len)
+        for j in range(0, kv_seq_len, chunk_size):
+            end_j = min(j + chunk_size, kv_seq_len)
             k_chunk = k[:, :, j:end_j, :]
             v_chunk = v[:, :, j:end_j, :]
 
