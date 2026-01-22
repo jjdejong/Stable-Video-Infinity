@@ -65,19 +65,19 @@ class StreamingVideoProcessor:
             model_configs=[
                 ModelConfig(
                     path=os.path.join(models_path, "diffusion_models/wan2.2_i2v_high_noise_14B_fp16.safetensors"),
-                    offload_device="cpu"
+                    offload_device=None  # No offload for unified memory
                 ),
                 ModelConfig(
                     path=os.path.join(models_path, "diffusion_models/wan2.2_i2v_low_noise_14B_fp16.safetensors"),
-                    offload_device="cpu"
+                    offload_device=None  # No offload for unified memory
                 ),
                 ModelConfig(
                     path=os.path.join(models_path, "text_encoders/umt5_xxl_fp16.safetensors"),
-                    offload_device="cpu"
+                    offload_device=None  # No offload for unified memory
                 ),
                 ModelConfig(
                     path=os.path.join(models_path, "vae/wan_2.1_vae.safetensors"),
-                    offload_device="cpu"
+                    offload_device=None  # No offload for unified memory
                 ),
             ],
         )
