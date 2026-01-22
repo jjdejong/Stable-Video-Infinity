@@ -26,7 +26,8 @@ def WanVideoTextEncoderStateDictConverter(state_dict):
 
     new_state_dict = {}
 
-    for key, value in state_dict.items():
+    # Iterate over keys (compatible with DiskMap which doesn't support .items())
+    for key in state_dict:
         new_key = None
 
         # Token embedding
@@ -71,6 +72,6 @@ def WanVideoTextEncoderStateDictConverter(state_dict):
 
         # Skip spiece_model and other unneeded keys
         if new_key is not None:
-            new_state_dict[new_key] = value
+            new_state_dict[new_key] = state_dict[key]
 
     return new_state_dict
