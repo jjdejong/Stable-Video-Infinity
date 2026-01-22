@@ -1,6 +1,6 @@
 {
-  "last_node_id": 100,
-  "last_link_id": 150,
+  "last_node_id": 200,
+  "last_link_id": 300,
   "nodes": [
     {
       "id": 1,
@@ -11,576 +11,1253 @@
       "order": 0,
       "mode": 0,
       "outputs": [
-        {"name": "IMAGE", "type": "IMAGE", "links": [1, 2, 3, 50, 51], "slot_index": 0},
+        {"name": "IMAGE", "type": "IMAGE", "links": [1], "slot_index": 0},
         {"name": "MASK", "type": "MASK", "links": null}
       ],
       "properties": {"Node name for S&R": "LoadImage"},
       "widgets_values": ["your_anchor_image.png", "image"],
-      "title": "🖼️ ANCHOR IMAGE (stays same for all clips)"
+      "title": "ANCHOR IMAGE"
     },
     {
       "id": 2,
-      "type": "WanVideoModelLoader",
-      "pos": [100, 500],
-      "size": [400, 220],
+      "type": "SetNode",
+      "pos": [450, 100],
+      "size": [200, 60],
       "flags": {},
       "order": 1,
       "mode": 0,
-      "outputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "links": [4], "slot_index": 0}
+      "inputs": [
+        {"name": "value", "type": "IMAGE", "link": 1}
       ],
-      "properties": {"Node name for S&R": "WanVideoModelLoader"},
-      "widgets_values": ["wan2.2_i2v_high_noise_14B_fp16.safetensors", "fp16_fast", "fp8_e4m3fn", "offload_device", "sdpa", "default"],
-      "title": "HIGH Noise Model (14B)"
+      "outputs": [
+        {"name": "value", "type": "IMAGE", "links": null}
+      ],
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["ANCHOR_IMAGE"],
+      "title": "Set: ANCHOR_IMAGE"
     },
+
     {
-      "id": 3,
+      "id": 10,
       "type": "WanVideoModelLoader",
-      "pos": [100, 800],
+      "pos": [100, 500],
       "size": [400, 220],
       "flags": {},
       "order": 2,
       "mode": 0,
       "outputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "links": [5], "slot_index": 0}
+        {"name": "model", "type": "WANVIDEOMODEL", "links": [10], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "WanVideoModelLoader"},
-      "widgets_values": ["wan2.2_i2v_low_noise_14B_fp16.safetensors", "fp16_fast", "fp8_e4m3fn", "offload_device", "sdpa", "default"],
-      "title": "LOW Noise Model (14B)"
+      "widgets_values": ["wan2.2_i2v_high_noise_14B_fp16.safetensors", "fp16_fast", "fp8_e4m3fn", "disabled", "sdpa", "default"],
+      "title": "HIGH Noise Model (14B) - No Offload"
     },
     {
-      "id": 4,
+      "id": 11,
+      "type": "WanVideoModelLoader",
+      "pos": [100, 800],
+      "size": [400, 220],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "outputs": [
+        {"name": "model", "type": "WANVIDEOMODEL", "links": [11], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "WanVideoModelLoader"},
+      "widgets_values": ["wan2.2_i2v_low_noise_14B_fp16.safetensors", "fp16_fast", "fp8_e4m3fn", "disabled", "sdpa", "default"],
+      "title": "LOW Noise Model (14B) - No Offload"
+    },
+
+    {
+      "id": 12,
       "type": "WanVideoLoraSelect",
       "pos": [550, 500],
       "size": [400, 150],
       "flags": {},
-      "order": 3,
+      "order": 4,
       "mode": 0,
       "inputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "link": 4}
+        {"name": "model", "type": "WANVIDEOMODEL", "link": 10}
       ],
       "outputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "links": [6], "slot_index": 0}
+        {"name": "model", "type": "WANVIDEOMODEL", "links": [12], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "WanVideoLoraSelect"},
       "widgets_values": ["wan/SVI_Wan2.2-I2V-A14B_high_noise_lora_v2.0_pro.safetensors", 1.0, false, true],
       "title": "SVI LoRA - HIGH"
     },
     {
-      "id": 5,
+      "id": 13,
       "type": "WanVideoLoraSelect",
       "pos": [550, 800],
-      "size": [400, 150],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "link": 5}
-      ],
-      "outputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "links": [7], "slot_index": 0}
-      ],
-      "properties": {"Node name for S&R": "WanVideoLoraSelect"},
-      "widgets_values": ["wan/SVI_Wan2.2-I2V-A14B_low_noise_lora_v2.0_pro.safetensors", 1.0, false, true],
-      "title": "SVI LoRA - LOW"
-    },
-    {
-      "id": 6,
-      "type": "WanVideoLoraSelect",
-      "pos": [1000, 500],
       "size": [400, 150],
       "flags": {},
       "order": 5,
       "mode": 0,
       "inputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "link": 6}
+        {"name": "model", "type": "WANVIDEOMODEL", "link": 11}
       ],
       "outputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "links": [8, 60], "slot_index": 0}
+        {"name": "model", "type": "WANVIDEOMODEL", "links": [13], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "WanVideoLoraSelect"},
-      "widgets_values": ["Wan22_Lightx2v/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors", 0.5, false, true],
-      "title": "⚡ LightX2V HIGH (Optional - set alpha=0 to disable)"
+      "widgets_values": ["wan/SVI_Wan2.2-I2V-A14B_low_noise_lora_v2.0_pro.safetensors", 1.0, false, true],
+      "title": "SVI LoRA - LOW"
     },
+
     {
-      "id": 7,
+      "id": 14,
       "type": "WanVideoLoraSelect",
-      "pos": [1000, 800],
+      "pos": [1000, 500],
       "size": [400, 150],
       "flags": {},
       "order": 6,
       "mode": 0,
       "inputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "link": 7}
+        {"name": "model", "type": "WANVIDEOMODEL", "link": 12}
       ],
       "outputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "links": [9, 61], "slot_index": 0}
+        {"name": "model", "type": "WANVIDEOMODEL", "links": [14], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "WanVideoLoraSelect"},
-      "widgets_values": ["Wan22_Lightx2v/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors", 1.0, false, true],
-      "title": "⚡ LightX2V LOW (Optional - set alpha=0 to disable)"
+      "widgets_values": ["Wan22_Lightx2v/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors", 0.0, false, true],
+      "title": "LightX2V HIGH (alpha=0 to disable)"
     },
     {
-      "id": 8,
+      "id": 15,
+      "type": "WanVideoLoraSelect",
+      "pos": [1000, 800],
+      "size": [400, 150],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "WANVIDEOMODEL", "link": 13}
+      ],
+      "outputs": [
+        {"name": "model", "type": "WANVIDEOMODEL", "links": [15], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "WanVideoLoraSelect"},
+      "widgets_values": ["Wan22_Lightx2v/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors", 0.0, false, true],
+      "title": "LightX2V LOW (alpha=0 to disable)"
+    },
+
+    {
+      "id": 16,
+      "type": "SetNode",
+      "pos": [1450, 500],
+      "size": [200, 60],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {"name": "value", "type": "WANVIDEOMODEL", "link": 14}
+      ],
+      "outputs": [
+        {"name": "value", "type": "WANVIDEOMODEL", "links": null}
+      ],
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["HIGH_MODEL"],
+      "title": "Set: HIGH_MODEL"
+    },
+    {
+      "id": 17,
+      "type": "SetNode",
+      "pos": [1450, 800],
+      "size": [200, 60],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {"name": "value", "type": "WANVIDEOMODEL", "link": 15}
+      ],
+      "outputs": [
+        {"name": "value", "type": "WANVIDEOMODEL", "links": null}
+      ],
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["LOW_MODEL"],
+      "title": "Set: LOW_MODEL"
+    },
+
+    {
+      "id": 18,
       "type": "WanVideoVAELoader",
       "pos": [100, 1100],
       "size": [400, 80],
       "flags": {},
-      "order": 7,
+      "order": 10,
       "mode": 0,
       "outputs": [
-        {"name": "vae", "type": "WANVAE", "links": [10, 11, 62, 63], "slot_index": 0}
+        {"name": "vae", "type": "WANVAE", "links": [18], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "WanVideoVAELoader"},
       "widgets_values": ["wan_2.1_vae.safetensors"],
       "title": "VAE"
     },
     {
-      "id": 9,
-      "type": "WanVideoTextEncode",
-      "pos": [100, 1250],
-      "size": [400, 200],
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "outputs": [
-        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "links": [12, 64], "slot_index": 0}
-      ],
-      "properties": {"Node name for S&R": "WanVideoTextEncode"},
-      "widgets_values": ["A person walking through a forest, natural movement, cinematic lighting, smooth motion", "", "umt5_xxl_fp16.safetensors", true],
-      "title": "📝 Text Prompt (same for all clips, or vary per clip)"
-    },
-    {
-      "id": 99,
-      "type": "Note",
-      "pos": [550, 100],
-      "size": [600, 300],
-      "flags": {},
-      "order": 9,
-      "mode": 0,
-      "properties": {"text": ""},
-      "widgets_values": ["=== SVI 2.0 Pro Workflow ===\n\nThis workflow implements proper SVI motion latent passing between clips.\n\n📌 HOW TO ADD MORE CLIPS:\n1. Select all nodes in the 'CLIP 2' group (Ctrl+click or box select)\n2. Duplicate them (Ctrl+D)\n3. Move the duplicated group below\n4. Connect the 'motion_latent' output from previous clip's\n   'Extract Motion Latent' node to the new clip's\n   'WanVideoAddExtraLatent' extra_latents input\n5. Update the seed number (increment by 1)\n6. Connect the decode output to video concatenation\n\n📌 KEY PARAMETERS:\n- steps: 20 (or 4-8 with LightX2V at full strength)\n- HIGH sampler: steps 0-10\n- LOW sampler: steps 10-end\n- num_motion_latent: 1 (4 pixel frames)\n- boundary: 0.9 for I2V\n\n📌 LORA NOTES:\n- SVI LoRAs: Required for motion continuity\n- LightX2V: Optional speedup (set alpha=0 to disable)"],
-      "title": "📖 INSTRUCTIONS"
-    },
-
-    {
-      "id": 20,
-      "type": "WanVideoImageToVideoEncode",
-      "pos": [1550, 100],
-      "size": [350, 380],
-      "flags": {},
-      "order": 10,
-      "mode": 0,
-      "inputs": [
-        {"name": "vae", "type": "WANVAE", "link": 10},
-        {"name": "start_image", "type": "IMAGE", "link": 2},
-        {"name": "empty_frame_pad_image", "type": "IMAGE", "link": 3}
-      ],
-      "outputs": [
-        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "links": [20], "slot_index": 0}
-      ],
-      "properties": {"Node name for S&R": "WanVideoImageToVideoEncode"},
-      "widgets_values": [832, 480, 81, 0.0, 1.0, 1.0, true, false, false],
-      "title": "I2V Encode (anchor → SVI padding)"
-    },
-    {
-      "id": 21,
-      "type": "WanVideoSampler",
-      "pos": [1950, 100],
-      "size": [350, 500],
+      "id": 19,
+      "type": "SetNode",
+      "pos": [550, 1100],
+      "size": [200, 60],
       "flags": {},
       "order": 11,
       "mode": 0,
       "inputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "link": 8},
-        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 20},
-        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "link": 12}
+        {"name": "value", "type": "WANVAE", "link": 18}
       ],
       "outputs": [
-        {"name": "samples", "type": "LATENT", "links": [21], "slot_index": 0},
-        {"name": "denoised_samples", "type": "LATENT", "links": null}
+        {"name": "value", "type": "WANVAE", "links": null}
       ],
-      "properties": {"Node name for S&R": "WanVideoSampler"},
-      "widgets_values": [20, 6.0, 5.0, 1, true, "unipc", 0, 0, 10, false],
-      "title": "HIGH Sampler (steps 0→10)"
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["VAE"],
+      "title": "Set: VAE"
     },
+
     {
-      "id": 22,
-      "type": "WanVideoSampler",
-      "pos": [2350, 100],
-      "size": [350, 500],
+      "id": 20,
+      "type": "PrimitiveNode",
+      "pos": [100, 1250],
+      "size": [200, 80],
       "flags": {},
       "order": 12,
       "mode": 0,
-      "inputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "link": 9},
-        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 20},
-        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "link": 12},
-        {"name": "samples", "type": "LATENT", "link": 21}
-      ],
       "outputs": [
-        {"name": "samples", "type": "LATENT", "links": [22], "slot_index": 0},
-        {"name": "denoised_samples", "type": "LATENT", "links": [23], "slot_index": 1}
+        {"name": "INT", "type": "INT", "links": [20], "slot_index": 0}
       ],
-      "properties": {"Node name for S&R": "WanVideoSampler"},
-      "widgets_values": [20, 6.0, 5.0, 1, true, "unipc", 0, 10, -1, false],
-      "title": "LOW Sampler (steps 10→end)"
+      "properties": {"Node name for S&R": "PrimitiveNode"},
+      "widgets_values": [20],
+      "title": "STEPS"
     },
     {
-      "id": 23,
-      "type": "WanVideoDecode",
-      "pos": [2750, 100],
-      "size": [300, 220],
+      "id": 21,
+      "type": "SetNode",
+      "pos": [350, 1250],
+      "size": [200, 60],
       "flags": {},
       "order": 13,
       "mode": 0,
       "inputs": [
-        {"name": "vae", "type": "WANVAE", "link": 11},
-        {"name": "samples", "type": "LATENT", "link": 22}
+        {"name": "value", "type": "INT", "link": 20}
       ],
       "outputs": [
-        {"name": "images", "type": "IMAGE", "links": [24, 100], "slot_index": 0}
+        {"name": "value", "type": "INT", "links": null}
       ],
-      "properties": {"Node name for S&R": "WanVideoDecode"},
-      "widgets_values": [true, 272, 272, 144, 128],
-      "title": "Decode"
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["STEPS"],
+      "title": "Set: STEPS"
     },
     {
-      "id": 24,
-      "type": "SVIExtractMotionLatent",
-      "pos": [2750, 370],
-      "size": [300, 120],
+      "id": 22,
+      "type": "PrimitiveNode",
+      "pos": [600, 1250],
+      "size": [200, 80],
       "flags": {},
       "order": 14,
       "mode": 0,
-      "inputs": [
-        {"name": "samples", "type": "LATENT", "link": 23}
-      ],
       "outputs": [
-        {"name": "motion_latent", "type": "LATENT", "links": [30], "slot_index": 0}
+        {"name": "FLOAT", "type": "FLOAT", "links": [22], "slot_index": 0}
       ],
-      "properties": {"Node name for S&R": "SVIExtractMotionLatent"},
-      "widgets_values": [1],
-      "title": "Extract Motion Latent → CLIP 2"
+      "properties": {"Node name for S&R": "PrimitiveNode"},
+      "widgets_values": [6.0],
+      "title": "CFG"
     },
     {
-      "id": 25,
-      "type": "VHS_VideoCombine",
-      "pos": [3100, 100],
-      "size": [315, 400],
+      "id": 23,
+      "type": "SetNode",
+      "pos": [850, 1250],
+      "size": [200, 60],
       "flags": {},
       "order": 15,
       "mode": 0,
       "inputs": [
-        {"name": "images", "type": "IMAGE", "link": 24}
+        {"name": "value", "type": "FLOAT", "link": 22}
+      ],
+      "outputs": [
+        {"name": "value", "type": "FLOAT", "links": null}
+      ],
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["CFG"],
+      "title": "Set: CFG"
+    },
+    {
+      "id": 24,
+      "type": "PrimitiveNode",
+      "pos": [1100, 1250],
+      "size": [200, 80],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "outputs": [
+        {"name": "FLOAT", "type": "FLOAT", "links": [24], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "PrimitiveNode"},
+      "widgets_values": [5.0],
+      "title": "SHIFT"
+    },
+    {
+      "id": 25,
+      "type": "SetNode",
+      "pos": [1350, 1250],
+      "size": [200, 60],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {"name": "value", "type": "FLOAT", "link": 24}
+      ],
+      "outputs": [
+        {"name": "value", "type": "FLOAT", "links": null}
+      ],
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["SHIFT"],
+      "title": "Set: SHIFT"
+    },
+
+    {
+      "id": 26,
+      "type": "PrimitiveNode",
+      "pos": [100, 1400],
+      "size": [200, 80],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "outputs": [
+        {"name": "INT", "type": "INT", "links": [26], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "PrimitiveNode"},
+      "widgets_values": [832],
+      "title": "WIDTH"
+    },
+    {
+      "id": 27,
+      "type": "SetNode",
+      "pos": [350, 1400],
+      "size": [200, 60],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {"name": "value", "type": "INT", "link": 26}
+      ],
+      "outputs": [
+        {"name": "value", "type": "INT", "links": null}
+      ],
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["WIDTH"],
+      "title": "Set: WIDTH"
+    },
+    {
+      "id": 28,
+      "type": "PrimitiveNode",
+      "pos": [600, 1400],
+      "size": [200, 80],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "outputs": [
+        {"name": "INT", "type": "INT", "links": [28], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "PrimitiveNode"},
+      "widgets_values": [480],
+      "title": "HEIGHT"
+    },
+    {
+      "id": 29,
+      "type": "SetNode",
+      "pos": [850, 1400],
+      "size": [200, 60],
+      "flags": {},
+      "order": 21,
+      "mode": 0,
+      "inputs": [
+        {"name": "value", "type": "INT", "link": 28}
+      ],
+      "outputs": [
+        {"name": "value", "type": "INT", "links": null}
+      ],
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["HEIGHT"],
+      "title": "Set: HEIGHT"
+    },
+    {
+      "id": 30,
+      "type": "PrimitiveNode",
+      "pos": [1100, 1400],
+      "size": [200, 80],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "outputs": [
+        {"name": "INT", "type": "INT", "links": [30], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "PrimitiveNode"},
+      "widgets_values": [81],
+      "title": "NUM_FRAMES"
+    },
+    {
+      "id": 31,
+      "type": "SetNode",
+      "pos": [1350, 1400],
+      "size": [200, 60],
+      "flags": {},
+      "order": 23,
+      "mode": 0,
+      "inputs": [
+        {"name": "value", "type": "INT", "link": 30}
+      ],
+      "outputs": [
+        {"name": "value", "type": "INT", "links": null}
+      ],
+      "properties": {"Node name for S&R": "SetNode"},
+      "widgets_values": ["NUM_FRAMES"],
+      "title": "Set: NUM_FRAMES"
+    },
+
+    {
+      "id": 99,
+      "type": "Note",
+      "pos": [100, 1550],
+      "size": [800, 250],
+      "flags": {},
+      "order": 24,
+      "mode": 0,
+      "properties": {"text": ""},
+      "widgets_values": ["=== SVI 2.0 Pro Workflow ===\n\nThis workflow implements proper SVI motion latent passing between clips.\n\nSHARED PARAMETERS (above):\n- STEPS, CFG, SHIFT: Sampling parameters (Get in each clip)\n- WIDTH, HEIGHT, NUM_FRAMES: Video dimensions\n- HIGH_MODEL, LOW_MODEL: Models with LoRAs\n- VAE, ANCHOR_IMAGE: Shared resources\n\nEACH CLIP HAS:\n- Its own PROMPT (WanVideoTextEncode)\n- Its own SEED (for variation)\n- Get nodes to pull shared parameters\n\nTO ADD MORE CLIPS:\n1. Duplicate the CLIP 2 group\n2. Connect motion_latent from previous clip\n3. Change the seed and prompt as desired"],
+      "title": "INSTRUCTIONS"
+    },
+
+
+    {
+      "id": 100,
+      "type": "GetNode",
+      "pos": [1800, 100],
+      "size": [200, 60],
+      "flags": {},
+      "order": 25,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "IMAGE", "links": [100, 101], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["ANCHOR_IMAGE"],
+      "title": "Get: ANCHOR_IMAGE"
+    },
+    {
+      "id": 101,
+      "type": "GetNode",
+      "pos": [1800, 180],
+      "size": [200, 60],
+      "flags": {},
+      "order": 26,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "WANVAE", "links": [102, 103], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["VAE"],
+      "title": "Get: VAE"
+    },
+    {
+      "id": 102,
+      "type": "GetNode",
+      "pos": [1800, 260],
+      "size": [200, 60],
+      "flags": {},
+      "order": 27,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "WANVIDEOMODEL", "links": [104], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["HIGH_MODEL"],
+      "title": "Get: HIGH_MODEL"
+    },
+    {
+      "id": 103,
+      "type": "GetNode",
+      "pos": [1800, 340],
+      "size": [200, 60],
+      "flags": {},
+      "order": 28,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "WANVIDEOMODEL", "links": [105], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["LOW_MODEL"],
+      "title": "Get: LOW_MODEL"
+    },
+    {
+      "id": 104,
+      "type": "GetNode",
+      "pos": [1800, 420],
+      "size": [200, 60],
+      "flags": {},
+      "order": 29,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "INT", "links": [106, 107], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["STEPS"],
+      "title": "Get: STEPS"
+    },
+    {
+      "id": 105,
+      "type": "GetNode",
+      "pos": [1800, 500],
+      "size": [200, 60],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "FLOAT", "links": [108, 109], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["CFG"],
+      "title": "Get: CFG"
+    },
+    {
+      "id": 106,
+      "type": "GetNode",
+      "pos": [1800, 580],
+      "size": [200, 60],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "FLOAT", "links": [110, 111], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["SHIFT"],
+      "title": "Get: SHIFT"
+    },
+    {
+      "id": 107,
+      "type": "GetNode",
+      "pos": [1800, 660],
+      "size": [200, 60],
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "INT", "links": [112], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["WIDTH"],
+      "title": "Get: WIDTH"
+    },
+    {
+      "id": 108,
+      "type": "GetNode",
+      "pos": [1800, 740],
+      "size": [200, 60],
+      "flags": {},
+      "order": 33,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "INT", "links": [113], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["HEIGHT"],
+      "title": "Get: HEIGHT"
+    },
+    {
+      "id": 109,
+      "type": "GetNode",
+      "pos": [1800, 820],
+      "size": [200, 60],
+      "flags": {},
+      "order": 34,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "INT", "links": [114], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["NUM_FRAMES"],
+      "title": "Get: NUM_FRAMES"
+    },
+
+    {
+      "id": 110,
+      "type": "WanVideoTextEncode",
+      "pos": [2050, 100],
+      "size": [400, 200],
+      "flags": {},
+      "order": 35,
+      "mode": 0,
+      "outputs": [
+        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "links": [115, 116], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "WanVideoTextEncode"},
+      "widgets_values": ["A person walking through a forest, natural movement, cinematic lighting", "", "umt5_xxl_fp16.safetensors", false],
+      "title": "CLIP 1 PROMPT"
+    },
+    {
+      "id": 111,
+      "type": "PrimitiveNode",
+      "pos": [2050, 350],
+      "size": [200, 80],
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "outputs": [
+        {"name": "INT", "type": "INT", "links": [117, 118], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "PrimitiveNode"},
+      "widgets_values": [1],
+      "title": "CLIP 1 SEED"
+    },
+
+    {
+      "id": 120,
+      "type": "WanVideoImageToVideoEncode",
+      "pos": [2500, 100],
+      "size": [350, 350],
+      "flags": {},
+      "order": 37,
+      "mode": 0,
+      "inputs": [
+        {"name": "vae", "type": "WANVAE", "link": 102},
+        {"name": "start_image", "type": "IMAGE", "link": 100},
+        {"name": "empty_frame_pad_image", "type": "IMAGE", "link": 101},
+        {"name": "width", "type": "INT", "link": 112},
+        {"name": "height", "type": "INT", "link": 113},
+        {"name": "num_frames", "type": "INT", "link": 114}
+      ],
+      "outputs": [
+        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "links": [120], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "WanVideoImageToVideoEncode"},
+      "widgets_values": [832, 480, 81, 0.0, 1.0, 1.0, true, false, false],
+      "title": "I2V Encode"
+    },
+    {
+      "id": 121,
+      "type": "WanVideoSampler",
+      "pos": [2900, 100],
+      "size": [350, 450],
+      "flags": {},
+      "order": 38,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "WANVIDEOMODEL", "link": 104},
+        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 120},
+        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "link": 115},
+        {"name": "steps", "type": "INT", "link": 106},
+        {"name": "cfg", "type": "FLOAT", "link": 108},
+        {"name": "shift", "type": "FLOAT", "link": 110},
+        {"name": "seed", "type": "INT", "link": 117}
+      ],
+      "outputs": [
+        {"name": "samples", "type": "LATENT", "links": [121], "slot_index": 0},
+        {"name": "denoised_samples", "type": "LATENT", "links": null}
+      ],
+      "properties": {"Node name for S&R": "WanVideoSampler"},
+      "widgets_values": [20, 6.0, 5.0, 1, true, "unipc", 0, 0, 10, false],
+      "title": "HIGH Sampler (0→10)"
+    },
+    {
+      "id": 122,
+      "type": "WanVideoSampler",
+      "pos": [3300, 100],
+      "size": [350, 450],
+      "flags": {},
+      "order": 39,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "WANVIDEOMODEL", "link": 105},
+        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 120},
+        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "link": 116},
+        {"name": "samples", "type": "LATENT", "link": 121},
+        {"name": "steps", "type": "INT", "link": 107},
+        {"name": "cfg", "type": "FLOAT", "link": 109},
+        {"name": "shift", "type": "FLOAT", "link": 111},
+        {"name": "seed", "type": "INT", "link": 118}
+      ],
+      "outputs": [
+        {"name": "samples", "type": "LATENT", "links": [122], "slot_index": 0},
+        {"name": "denoised_samples", "type": "LATENT", "links": [123], "slot_index": 1}
+      ],
+      "properties": {"Node name for S&R": "WanVideoSampler"},
+      "widgets_values": [20, 6.0, 5.0, 1, true, "unipc", 0, 10, -1, false],
+      "title": "LOW Sampler (10→end)"
+    },
+    {
+      "id": 123,
+      "type": "WanVideoDecode",
+      "pos": [3700, 100],
+      "size": [300, 180],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "inputs": [
+        {"name": "vae", "type": "WANVAE", "link": 103},
+        {"name": "samples", "type": "LATENT", "link": 122}
+      ],
+      "outputs": [
+        {"name": "images", "type": "IMAGE", "links": [124, 200], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "WanVideoDecode"},
+      "widgets_values": [false, 272, 272, 144, 128],
+      "title": "Decode (No Offload)"
+    },
+    {
+      "id": 124,
+      "type": "SVIExtractMotionLatent",
+      "pos": [3700, 330],
+      "size": [300, 120],
+      "flags": {},
+      "order": 41,
+      "mode": 0,
+      "inputs": [
+        {"name": "samples", "type": "LATENT", "link": 123}
+      ],
+      "outputs": [
+        {"name": "motion_latent", "type": "LATENT", "links": [125], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "SVIExtractMotionLatent"},
+      "widgets_values": [1],
+      "title": "Extract Motion → CLIP 2"
+    },
+    {
+      "id": 125,
+      "type": "VHS_VideoCombine",
+      "pos": [4050, 100],
+      "size": [315, 350],
+      "flags": {},
+      "order": 42,
+      "mode": 0,
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 124}
       ],
       "outputs": [
         {"name": "Filenames", "type": "VHS_FILENAMES", "links": null}
       ],
       "properties": {"Node name for S&R": "VHS_VideoCombine"},
       "widgets_values": [15, "clip1_preview", "video/h264-mp4", false, true, "", "", ""],
-      "title": "Preview (CLIP 1)"
+      "title": "Preview CLIP 1"
+    },
+
+
+    {
+      "id": 150,
+      "type": "GetNode",
+      "pos": [1800, 1100],
+      "size": [200, 60],
+      "flags": {},
+      "order": 43,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "IMAGE", "links": [150, 151], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["ANCHOR_IMAGE"],
+      "title": "Get: ANCHOR_IMAGE"
+    },
+    {
+      "id": 151,
+      "type": "GetNode",
+      "pos": [1800, 1180],
+      "size": [200, 60],
+      "flags": {},
+      "order": 44,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "WANVAE", "links": [152, 153], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["VAE"],
+      "title": "Get: VAE"
+    },
+    {
+      "id": 152,
+      "type": "GetNode",
+      "pos": [1800, 1260],
+      "size": [200, 60],
+      "flags": {},
+      "order": 45,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "WANVIDEOMODEL", "links": [154], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["HIGH_MODEL"],
+      "title": "Get: HIGH_MODEL"
+    },
+    {
+      "id": 153,
+      "type": "GetNode",
+      "pos": [1800, 1340],
+      "size": [200, 60],
+      "flags": {},
+      "order": 46,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "WANVIDEOMODEL", "links": [155], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["LOW_MODEL"],
+      "title": "Get: LOW_MODEL"
+    },
+    {
+      "id": 154,
+      "type": "GetNode",
+      "pos": [1800, 1420],
+      "size": [200, 60],
+      "flags": {},
+      "order": 47,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "INT", "links": [156, 157], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["STEPS"],
+      "title": "Get: STEPS"
+    },
+    {
+      "id": 155,
+      "type": "GetNode",
+      "pos": [1800, 1500],
+      "size": [200, 60],
+      "flags": {},
+      "order": 48,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "FLOAT", "links": [158, 159], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["CFG"],
+      "title": "Get: CFG"
+    },
+    {
+      "id": 156,
+      "type": "GetNode",
+      "pos": [1800, 1580],
+      "size": [200, 60],
+      "flags": {},
+      "order": 49,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "FLOAT", "links": [160, 161], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["SHIFT"],
+      "title": "Get: SHIFT"
+    },
+    {
+      "id": 157,
+      "type": "GetNode",
+      "pos": [1800, 1660],
+      "size": [200, 60],
+      "flags": {},
+      "order": 50,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "INT", "links": [162], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["WIDTH"],
+      "title": "Get: WIDTH"
+    },
+    {
+      "id": 158,
+      "type": "GetNode",
+      "pos": [1800, 1740],
+      "size": [200, 60],
+      "flags": {},
+      "order": 51,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "INT", "links": [163], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["HEIGHT"],
+      "title": "Get: HEIGHT"
+    },
+    {
+      "id": 159,
+      "type": "GetNode",
+      "pos": [1800, 1820],
+      "size": [200, 60],
+      "flags": {},
+      "order": 52,
+      "mode": 0,
+      "outputs": [
+        {"name": "value", "type": "INT", "links": [164], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "GetNode"},
+      "widgets_values": ["NUM_FRAMES"],
+      "title": "Get: NUM_FRAMES"
     },
 
     {
-      "id": 30,
-      "type": "WanVideoImageToVideoEncode",
-      "pos": [1550, 700],
-      "size": [350, 380],
+      "id": 160,
+      "type": "WanVideoTextEncode",
+      "pos": [2050, 1100],
+      "size": [400, 200],
       "flags": {},
-      "order": 16,
+      "order": 53,
+      "mode": 0,
+      "outputs": [
+        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "links": [165, 166], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "WanVideoTextEncode"},
+      "widgets_values": ["The person continues walking deeper into the forest, camera follows smoothly", "", "umt5_xxl_fp16.safetensors", false],
+      "title": "CLIP 2 PROMPT"
+    },
+    {
+      "id": 161,
+      "type": "PrimitiveNode",
+      "pos": [2050, 1350],
+      "size": [200, 80],
+      "flags": {},
+      "order": 54,
+      "mode": 0,
+      "outputs": [
+        {"name": "INT", "type": "INT", "links": [167, 168], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "PrimitiveNode"},
+      "widgets_values": [2],
+      "title": "CLIP 2 SEED"
+    },
+
+    {
+      "id": 170,
+      "type": "WanVideoImageToVideoEncode",
+      "pos": [2500, 1100],
+      "size": [350, 350],
+      "flags": {},
+      "order": 55,
       "mode": 0,
       "inputs": [
-        {"name": "vae", "type": "WANVAE", "link": 62},
-        {"name": "start_image", "type": "IMAGE", "link": 50},
-        {"name": "empty_frame_pad_image", "type": "IMAGE", "link": 51}
+        {"name": "vae", "type": "WANVAE", "link": 152},
+        {"name": "start_image", "type": "IMAGE", "link": 150},
+        {"name": "empty_frame_pad_image", "type": "IMAGE", "link": 151},
+        {"name": "width", "type": "INT", "link": 162},
+        {"name": "height", "type": "INT", "link": 163},
+        {"name": "num_frames", "type": "INT", "link": 164}
       ],
       "outputs": [
-        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "links": [31], "slot_index": 0}
+        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "links": [170], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "WanVideoImageToVideoEncode"},
       "widgets_values": [832, 480, 81, 0.0, 1.0, 1.0, true, false, false],
-      "title": "I2V Encode (anchor → SVI padding)"
+      "title": "I2V Encode"
     },
     {
-      "id": 31,
+      "id": 171,
       "type": "WanVideoAddExtraLatent",
-      "pos": [1950, 700],
+      "pos": [2900, 1100],
       "size": [350, 130],
       "flags": {},
-      "order": 17,
+      "order": 56,
       "mode": 0,
       "inputs": [
-        {"name": "embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 31},
-        {"name": "extra_latents", "type": "LATENT", "link": 30}
+        {"name": "embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 170},
+        {"name": "extra_latents", "type": "LATENT", "link": 125}
       ],
       "outputs": [
-        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "links": [32], "slot_index": 0}
+        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "links": [171], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "WanVideoAddExtraLatent"},
       "widgets_values": [1],
-      "title": "➕ Insert Motion Latent (index=1)"
+      "title": "Insert Motion Latent (index=1)"
     },
     {
-      "id": 32,
+      "id": 172,
       "type": "WanVideoSampler",
-      "pos": [1950, 880],
-      "size": [350, 500],
+      "pos": [2900, 1280],
+      "size": [350, 450],
       "flags": {},
-      "order": 18,
+      "order": 57,
       "mode": 0,
       "inputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "link": 60},
-        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 32},
-        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "link": 64}
+        {"name": "model", "type": "WANVIDEOMODEL", "link": 154},
+        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 171},
+        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "link": 165},
+        {"name": "steps", "type": "INT", "link": 156},
+        {"name": "cfg", "type": "FLOAT", "link": 158},
+        {"name": "shift", "type": "FLOAT", "link": 160},
+        {"name": "seed", "type": "INT", "link": 167}
       ],
       "outputs": [
-        {"name": "samples", "type": "LATENT", "links": [33], "slot_index": 0},
+        {"name": "samples", "type": "LATENT", "links": [172], "slot_index": 0},
         {"name": "denoised_samples", "type": "LATENT", "links": null}
       ],
       "properties": {"Node name for S&R": "WanVideoSampler"},
       "widgets_values": [20, 6.0, 5.0, 2, true, "unipc", 0, 0, 10, false],
-      "title": "HIGH Sampler (steps 0→10) [seed=2]"
+      "title": "HIGH Sampler (0→10)"
     },
     {
-      "id": 33,
+      "id": 173,
       "type": "WanVideoSampler",
-      "pos": [2350, 880],
-      "size": [350, 500],
+      "pos": [3300, 1280],
+      "size": [350, 450],
       "flags": {},
-      "order": 19,
+      "order": 58,
       "mode": 0,
       "inputs": [
-        {"name": "model", "type": "WANVIDEOMODEL", "link": 61},
-        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 32},
-        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "link": 64},
-        {"name": "samples", "type": "LATENT", "link": 33}
+        {"name": "model", "type": "WANVIDEOMODEL", "link": 155},
+        {"name": "image_embeds", "type": "WANVIDIMAGE_EMBEDS", "link": 171},
+        {"name": "text_embeds", "type": "WANVIDEOTEXTEMBEDS", "link": 166},
+        {"name": "samples", "type": "LATENT", "link": 172},
+        {"name": "steps", "type": "INT", "link": 157},
+        {"name": "cfg", "type": "FLOAT", "link": 159},
+        {"name": "shift", "type": "FLOAT", "link": 161},
+        {"name": "seed", "type": "INT", "link": 168}
       ],
       "outputs": [
-        {"name": "samples", "type": "LATENT", "links": [34], "slot_index": 0},
-        {"name": "denoised_samples", "type": "LATENT", "links": [35], "slot_index": 1}
+        {"name": "samples", "type": "LATENT", "links": [173], "slot_index": 0},
+        {"name": "denoised_samples", "type": "LATENT", "links": [174], "slot_index": 1}
       ],
       "properties": {"Node name for S&R": "WanVideoSampler"},
       "widgets_values": [20, 6.0, 5.0, 2, true, "unipc", 0, 10, -1, false],
-      "title": "LOW Sampler (steps 10→end) [seed=2]"
+      "title": "LOW Sampler (10→end)"
     },
     {
-      "id": 34,
+      "id": 174,
       "type": "WanVideoDecode",
-      "pos": [2750, 880],
-      "size": [300, 220],
+      "pos": [3700, 1280],
+      "size": [300, 180],
       "flags": {},
-      "order": 20,
+      "order": 59,
       "mode": 0,
       "inputs": [
-        {"name": "vae", "type": "WANVAE", "link": 63},
-        {"name": "samples", "type": "LATENT", "link": 34}
+        {"name": "vae", "type": "WANVAE", "link": 153},
+        {"name": "samples", "type": "LATENT", "link": 173}
       ],
       "outputs": [
-        {"name": "images", "type": "IMAGE", "links": [36, 101], "slot_index": 0}
+        {"name": "images", "type": "IMAGE", "links": [175, 201], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "WanVideoDecode"},
-      "widgets_values": [true, 272, 272, 144, 128],
-      "title": "Decode"
+      "widgets_values": [false, 272, 272, 144, 128],
+      "title": "Decode (No Offload)"
     },
     {
-      "id": 35,
+      "id": 175,
       "type": "SVIExtractMotionLatent",
-      "pos": [2750, 1150],
+      "pos": [3700, 1510],
       "size": [300, 120],
       "flags": {},
-      "order": 21,
+      "order": 60,
       "mode": 0,
       "inputs": [
-        {"name": "samples", "type": "LATENT", "link": 35}
+        {"name": "samples", "type": "LATENT", "link": 174}
       ],
       "outputs": [
         {"name": "motion_latent", "type": "LATENT", "links": null, "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "SVIExtractMotionLatent"},
       "widgets_values": [1],
-      "title": "Extract Motion Latent → CLIP 3 (connect when adding)"
+      "title": "Extract Motion → CLIP 3"
     },
     {
-      "id": 36,
+      "id": 176,
       "type": "VHS_VideoCombine",
-      "pos": [3100, 880],
-      "size": [315, 400],
+      "pos": [4050, 1280],
+      "size": [315, 350],
       "flags": {},
-      "order": 22,
+      "order": 61,
       "mode": 0,
       "inputs": [
-        {"name": "images", "type": "IMAGE", "link": 36}
+        {"name": "images", "type": "IMAGE", "link": 175}
       ],
       "outputs": [
         {"name": "Filenames", "type": "VHS_FILENAMES", "links": null}
       ],
       "properties": {"Node name for S&R": "VHS_VideoCombine"},
       "widgets_values": [15, "clip2_preview", "video/h264-mp4", false, true, "", "", ""],
-      "title": "Preview (CLIP 2)"
-    },
-    {
-      "id": 37,
-      "type": "Note",
-      "pos": [1550, 1450],
-      "size": [500, 150],
-      "flags": {},
-      "order": 23,
-      "mode": 0,
-      "properties": {"text": ""},
-      "widgets_values": ["📋 TO DUPLICATE THIS CLIP:\n\n1. Select nodes 30-36 (the entire CLIP 2 group)\n2. Ctrl+D to duplicate\n3. Move down, update seed to 3, 4, 5...\n4. Connect previous clip's 'Extract Motion Latent' output\n   to the new 'WanVideoAddExtraLatent' extra_latents input"],
-      "title": "🔄 DUPLICATION GUIDE"
+      "title": "Preview CLIP 2"
     },
 
     {
-      "id": 40,
+      "id": 177,
+      "type": "Note",
+      "pos": [2050, 1500],
+      "size": [400, 150],
+      "flags": {},
+      "order": 62,
+      "mode": 0,
+      "properties": {"text": ""},
+      "widgets_values": ["DUPLICATE THIS CLIP:\n1. Select all nodes in CLIP 2 group (150-176)\n2. Ctrl+D to duplicate\n3. Connect prev motion_latent to new WanVideoAddExtraLatent\n4. Change SEED and PROMPT\n5. Connect decode output to concatenation"],
+      "title": "DUPLICATION GUIDE"
+    },
+
+
+    {
+      "id": 180,
       "type": "GetImageRangeFromBatch",
-      "pos": [3500, 100],
+      "pos": [4500, 100],
       "size": [300, 120],
       "flags": {},
-      "order": 24,
+      "order": 63,
       "mode": 0,
       "inputs": [
-        {"name": "images", "type": "IMAGE", "link": 100}
+        {"name": "images", "type": "IMAGE", "link": 200}
       ],
       "outputs": [
-        {"name": "IMAGE", "type": "IMAGE", "links": [40], "slot_index": 0}
+        {"name": "IMAGE", "type": "IMAGE", "links": [180], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "GetImageRangeFromBatch"},
       "widgets_values": [0, 77],
-      "title": "CLIP 1: Keep frames 0-76"
+      "title": "CLIP 1: frames 0-76"
     },
     {
-      "id": 41,
+      "id": 181,
       "type": "GetImageRangeFromBatch",
-      "pos": [3500, 280],
+      "pos": [4500, 280],
       "size": [300, 120],
       "flags": {},
-      "order": 25,
+      "order": 64,
       "mode": 0,
       "inputs": [
-        {"name": "images", "type": "IMAGE", "link": 101}
+        {"name": "images", "type": "IMAGE", "link": 201}
       ],
       "outputs": [
-        {"name": "IMAGE", "type": "IMAGE", "links": [41], "slot_index": 0}
+        {"name": "IMAGE", "type": "IMAGE", "links": [181], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "GetImageRangeFromBatch"},
       "widgets_values": [4, -1],
-      "title": "CLIP 2: Skip first 4 (overlap)"
+      "title": "CLIP 2: skip 4 overlap"
     },
     {
-      "id": 42,
+      "id": 182,
       "type": "ImageBatch",
-      "pos": [3850, 180],
+      "pos": [4850, 180],
       "size": [200, 100],
       "flags": {},
-      "order": 26,
+      "order": 65,
       "mode": 0,
       "inputs": [
-        {"name": "image1", "type": "IMAGE", "link": 40},
-        {"name": "image2", "type": "IMAGE", "link": 41}
+        {"name": "image1", "type": "IMAGE", "link": 180},
+        {"name": "image2", "type": "IMAGE", "link": 181}
       ],
       "outputs": [
-        {"name": "IMAGE", "type": "IMAGE", "links": [42], "slot_index": 0}
+        {"name": "IMAGE", "type": "IMAGE", "links": [182], "slot_index": 0}
       ],
       "properties": {"Node name for S&R": "ImageBatch"},
       "title": "Concatenate"
     },
     {
-      "id": 43,
+      "id": 183,
       "type": "VHS_VideoCombine",
-      "pos": [4100, 100],
+      "pos": [5100, 100],
       "size": [315, 400],
       "flags": {},
-      "order": 27,
+      "order": 66,
       "mode": 0,
       "inputs": [
-        {"name": "images", "type": "IMAGE", "link": 42}
+        {"name": "images", "type": "IMAGE", "link": 182}
       ],
       "outputs": [
         {"name": "Filenames", "type": "VHS_FILENAMES", "links": null}
       ],
       "properties": {"Node name for S&R": "VHS_VideoCombine"},
       "widgets_values": [15, "svi_final_combined", "video/h264-mp4", false, true, "", "", ""],
-      "title": "🎬 FINAL VIDEO"
-    },
-    {
-      "id": 44,
-      "type": "Note",
-      "pos": [3500, 450],
-      "size": [400, 200],
-      "flags": {},
-      "order": 28,
-      "mode": 0,
-      "properties": {"text": ""},
-      "widgets_values": ["📋 ADDING MORE CLIPS TO FINAL VIDEO:\n\nFor each new clip:\n1. Add another GetImageRangeFromBatch\n   - Connect to new clip's Decode output\n   - Set start=4 (skip overlap frames)\n2. Chain ImageBatch nodes:\n   - First ImageBatch: clip1 + clip2\n   - Second ImageBatch: (clip1+2) + clip3\n   - And so on...\n\nOverlap is 4 pixel frames (1 latent frame)"],
-      "title": "🎬 CONCATENATION GUIDE"
+      "title": "FINAL VIDEO"
     }
   ],
   "links": [
-    [1, 1, 0, 9, 0, "IMAGE"],
-    [2, 1, 0, 20, 1, "IMAGE"],
-    [3, 1, 0, 20, 2, "IMAGE"],
-    [4, 2, 0, 4, 0, "WANVIDEOMODEL"],
-    [5, 3, 0, 5, 0, "WANVIDEOMODEL"],
-    [6, 4, 0, 6, 0, "WANVIDEOMODEL"],
-    [7, 5, 0, 7, 0, "WANVIDEOMODEL"],
-    [8, 6, 0, 21, 0, "WANVIDEOMODEL"],
-    [9, 7, 0, 22, 0, "WANVIDEOMODEL"],
-    [10, 8, 0, 20, 0, "WANVAE"],
-    [11, 8, 0, 23, 0, "WANVAE"],
-    [12, 9, 0, 21, 2, "WANVIDEOTEXTEMBEDS"],
-    [20, 20, 0, 21, 1, "WANVIDIMAGE_EMBEDS"],
-    [21, 21, 0, 22, 3, "LATENT"],
-    [22, 22, 0, 23, 1, "LATENT"],
-    [23, 22, 1, 24, 0, "LATENT"],
-    [24, 23, 0, 25, 0, "IMAGE"],
-    [30, 24, 0, 31, 1, "LATENT"],
-    [31, 30, 0, 31, 0, "WANVIDIMAGE_EMBEDS"],
-    [32, 31, 0, 32, 1, "WANVIDIMAGE_EMBEDS"],
-    [33, 32, 0, 33, 3, "LATENT"],
-    [34, 33, 0, 34, 1, "LATENT"],
-    [35, 33, 1, 35, 0, "LATENT"],
-    [36, 34, 0, 36, 0, "IMAGE"],
-    [40, 40, 0, 42, 0, "IMAGE"],
-    [41, 41, 0, 42, 1, "IMAGE"],
-    [42, 42, 0, 43, 0, "IMAGE"],
-    [50, 1, 0, 30, 1, "IMAGE"],
-    [51, 1, 0, 30, 2, "IMAGE"],
-    [60, 6, 0, 32, 0, "WANVIDEOMODEL"],
-    [61, 7, 0, 33, 0, "WANVIDEOMODEL"],
-    [62, 8, 0, 30, 0, "WANVAE"],
-    [63, 8, 0, 34, 0, "WANVAE"],
-    [64, 9, 0, 32, 2, "WANVIDEOTEXTEMBEDS"],
-    [100, 23, 0, 40, 0, "IMAGE"],
-    [101, 34, 0, 41, 0, "IMAGE"]
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [10, 10, 0, 12, 0, "WANVIDEOMODEL"],
+    [11, 11, 0, 13, 0, "WANVIDEOMODEL"],
+    [12, 12, 0, 14, 0, "WANVIDEOMODEL"],
+    [13, 13, 0, 15, 0, "WANVIDEOMODEL"],
+    [14, 14, 0, 16, 0, "WANVIDEOMODEL"],
+    [15, 15, 0, 17, 0, "WANVIDEOMODEL"],
+    [18, 18, 0, 19, 0, "WANVAE"],
+    [20, 20, 0, 21, 0, "INT"],
+    [22, 22, 0, 23, 0, "FLOAT"],
+    [24, 24, 0, 25, 0, "FLOAT"],
+    [26, 26, 0, 27, 0, "INT"],
+    [28, 28, 0, 29, 0, "INT"],
+    [30, 30, 0, 31, 0, "INT"],
+
+    [100, 100, 0, 120, 1, "IMAGE"],
+    [101, 100, 0, 120, 2, "IMAGE"],
+    [102, 101, 0, 120, 0, "WANVAE"],
+    [103, 101, 0, 123, 0, "WANVAE"],
+    [104, 102, 0, 121, 0, "WANVIDEOMODEL"],
+    [105, 103, 0, 122, 0, "WANVIDEOMODEL"],
+    [106, 104, 0, 121, 3, "INT"],
+    [107, 104, 0, 122, 4, "INT"],
+    [108, 105, 0, 121, 4, "FLOAT"],
+    [109, 105, 0, 122, 5, "FLOAT"],
+    [110, 106, 0, 121, 5, "FLOAT"],
+    [111, 106, 0, 122, 6, "FLOAT"],
+    [112, 107, 0, 120, 3, "INT"],
+    [113, 108, 0, 120, 4, "INT"],
+    [114, 109, 0, 120, 5, "INT"],
+    [115, 110, 0, 121, 2, "WANVIDEOTEXTEMBEDS"],
+    [116, 110, 0, 122, 2, "WANVIDEOTEXTEMBEDS"],
+    [117, 111, 0, 121, 6, "INT"],
+    [118, 111, 0, 122, 7, "INT"],
+    [120, 120, 0, 121, 1, "WANVIDIMAGE_EMBEDS"],
+    [121, 121, 0, 122, 3, "LATENT"],
+    [122, 122, 0, 123, 1, "LATENT"],
+    [123, 122, 1, 124, 0, "LATENT"],
+    [124, 123, 0, 125, 0, "IMAGE"],
+    [125, 124, 0, 171, 1, "LATENT"],
+
+    [150, 150, 0, 170, 1, "IMAGE"],
+    [151, 150, 0, 170, 2, "IMAGE"],
+    [152, 151, 0, 170, 0, "WANVAE"],
+    [153, 151, 0, 174, 0, "WANVAE"],
+    [154, 152, 0, 172, 0, "WANVIDEOMODEL"],
+    [155, 153, 0, 173, 0, "WANVIDEOMODEL"],
+    [156, 154, 0, 172, 3, "INT"],
+    [157, 154, 0, 173, 4, "INT"],
+    [158, 155, 0, 172, 4, "FLOAT"],
+    [159, 155, 0, 173, 5, "FLOAT"],
+    [160, 156, 0, 172, 5, "FLOAT"],
+    [161, 156, 0, 173, 6, "FLOAT"],
+    [162, 157, 0, 170, 3, "INT"],
+    [163, 158, 0, 170, 4, "INT"],
+    [164, 159, 0, 170, 5, "INT"],
+    [165, 160, 0, 172, 2, "WANVIDEOTEXTEMBEDS"],
+    [166, 160, 0, 173, 2, "WANVIDEOTEXTEMBEDS"],
+    [167, 161, 0, 172, 6, "INT"],
+    [168, 161, 0, 173, 7, "INT"],
+    [170, 170, 0, 171, 0, "WANVIDIMAGE_EMBEDS"],
+    [171, 171, 0, 172, 1, "WANVIDIMAGE_EMBEDS"],
+    [172, 172, 0, 173, 3, "LATENT"],
+    [173, 173, 0, 174, 1, "LATENT"],
+    [174, 173, 1, 175, 0, "LATENT"],
+    [175, 174, 0, 176, 0, "IMAGE"],
+
+    [180, 180, 0, 182, 0, "IMAGE"],
+    [181, 181, 0, 182, 1, "IMAGE"],
+    [182, 182, 0, 183, 0, "IMAGE"],
+    [200, 123, 0, 180, 0, "IMAGE"],
+    [201, 174, 0, 181, 0, "IMAGE"]
   ],
   "groups": [
     {
-      "title": "🔧 SHARED RESOURCES (Models, VAE, LoRAs)",
-      "bounding": [80, 80, 1400, 1400],
+      "title": "SHARED RESOURCES (Models, VAE, LoRAs, Parameters)",
+      "bounding": [80, 80, 1600, 1750],
       "color": "#3f5f8f"
     },
     {
-      "title": "🎬 CLIP 1 (First Clip - No motion input)",
-      "bounding": [1530, 80, 1950, 550],
+      "title": "CLIP 1 (First Clip - No motion input)",
+      "bounding": [1780, 80, 2700, 900],
       "color": "#3f789e"
     },
     {
-      "title": "🎬 CLIP 2 (Template - Receives motion from CLIP 1) [DUPLICATE THIS FOR MORE CLIPS]",
-      "bounding": [1530, 680, 1950, 900],
+      "title": "CLIP 2 (Receives motion from CLIP 1) - DUPLICATE THIS FOR MORE CLIPS",
+      "bounding": [1780, 1080, 2700, 900],
       "color": "#5a8a5a"
     },
     {
-      "title": "🎬 VIDEO CONCATENATION",
-      "bounding": [3480, 80, 970, 600],
+      "title": "VIDEO CONCATENATION",
+      "bounding": [4480, 80, 1000, 500],
       "color": "#8a5a8a"
     }
   ],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.4,
+      "scale": 0.3,
       "offset": [100, 100]
     }
   },
