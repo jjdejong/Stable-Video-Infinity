@@ -155,7 +155,7 @@ class StreamingVideoProcessor:
                 prompt=prompts[clip_idx],
                 negative_prompt="bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards",
                 seed=clip_idx * self.seed_multiplier,
-                tiled=False,
+                tiled=True,  # Enable VAE tiling
                 height=self.height,
                 width=self.width,
                 input_image=current_input_image,
