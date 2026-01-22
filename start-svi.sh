@@ -1,5 +1,37 @@
 #!/bin/bash
 # SVI 2.0 Pro startup script for AMD Strix Halo (gfx1151) with ROCm
+#
+# Usage: ./start-svi.sh [options]
+#
+# Arguments:
+#   --comfyui_models PATH      ComfyUI models directory (default: ~/ComfyUI/models)
+#   --output_root PATH         Output directory (default: ./output)
+#   --ref_image_path PATH      Reference/anchor image
+#   --prompt_path PATH         Text file with prompts list
+#
+# Generation:
+#   --num_clips N              Number of clips to generate (default: 15)
+#   --frames_per_clip N        Frames per clip (default: 81)
+#   --height N                 Video height (default: 480)
+#   --width N                  Video width (default: 832)
+#   --fps N                    Output framerate (default: 15)
+#
+# Sampling:
+#   --num_inference_steps N    Denoising steps: 20-30 normal, 4-8 with LightX2V (default: 20)
+#   --cfg_scale F              Classifier-free guidance scale (default: 5.0)
+#   --seed_multiplier N        Seed = clip_idx * multiplier (default: 42)
+#   --dtype {fp16,bf16}        Model precision (default: fp16)
+#
+# Motion continuity:
+#   --num_motion_latent N      Latent frames passed between clips (default: 1)
+#   --num_motion_frame N       Pixel frames for next input (default: 4)
+#   --num_overlap_frame N      Frames to skip when concatenating (default: 4)
+#
+# LoRAs (paths relative to comfyui_models/loras or absolute):
+#   --lora_path_high PATH      High noise SVI LoRA (default: wan/SVI_..._high_noise_..._v2.0_pro.safetensors)
+#   --lora_path_low PATH       Low noise SVI LoRA (default: wan/SVI_..._low_noise_..._v2.0_pro.safetensors)
+#   --extra_loras_high STR     Additional LoRAs for high-noise model (format: "path:alpha,path:alpha")
+#   --extra_loras_low STR      Additional LoRAs for low-noise model (format: "path:alpha,path:alpha")
 
 # Change to SVI directory
 cd "$(dirname "$0")"
