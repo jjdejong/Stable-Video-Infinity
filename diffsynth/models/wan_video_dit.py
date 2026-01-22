@@ -24,11 +24,28 @@ except ModuleNotFoundError:
     SAGE_ATTN_AVAILABLE = False
 
 # Try to use ComfyUI's optimized attention (for when running in ComfyUI environment)
+COMFY_ATTENTION_AVAILABLE = False
 try:
     from comfy.ldm.modules.attention import optimized_attention as comfy_optimized_attention
     COMFY_ATTENTION_AVAILABLE = True
 except (ModuleNotFoundError, ImportError):
-    COMFY_ATTENTION_AVAILABLE = False
+    # Try adding ComfyUI to path (for standalone script usage)
+    import sys
+    import os
+    comfyui_paths = [
+        os.path.expanduser("~/ComfyUI"),
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."),  # If inside ComfyUI/custom_nodes
+    ]
+    for path in comfyui_paths:
+        if os.path.exists(os.path.join(path, "comfy")):
+            if path not in sys.path:
+                sys.path.insert(0, path)
+            try:
+                from comfy.ldm.modules.attention import optimized_attention as comfy_optimized_attention
+                COMFY_ATTENTION_AVAILABLE = True
+                break
+            except (ModuleNotFoundError, ImportError):
+                continue
 
 
 # Memory-efficient chunked attention for systems without flash_attn or sage_attn
