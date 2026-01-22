@@ -23,6 +23,13 @@ try:
 except ModuleNotFoundError:
     SAGE_ATTN_AVAILABLE = False
 
+# Try to use ComfyUI's optimized attention (for when running in ComfyUI environment)
+try:
+    from comfy.ldm.modules.attention import optimized_attention as comfy_optimized_attention
+    COMFY_ATTENTION_AVAILABLE = True
+except (ModuleNotFoundError, ImportError):
+    COMFY_ATTENTION_AVAILABLE = False
+
 
 # Memory-efficient chunked attention for systems without flash_attn or sage_attn
 # Based on "Self-attention Does Not Need O(n²) Memory" (https://arxiv.org/abs/2112.05682)
@@ -111,6 +118,10 @@ def flash_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, num_heads
         v = rearrange(v, "b s (n d) -> b n s d", n=num_heads)
         x = sageattn(q, k, v)
         x = rearrange(x, "b n s d -> b s (n d)", n=num_heads)
+    elif COMFY_ATTENTION_AVAILABLE:
+        # Use ComfyUI's optimized attention (memory-efficient, works on AMD)
+        # ComfyUI expects [batch, seq, heads*dim] input format
+        x = comfy_optimized_attention(q, k, v, heads=num_heads)
     else:
         # Use chunked attention for memory efficiency on systems without flash_attn/sage_attn
         q = rearrange(q, "b s (n d) -> b n s d", n=num_heads)
