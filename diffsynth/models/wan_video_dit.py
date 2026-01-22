@@ -22,8 +22,65 @@ try:
     SAGE_ATTN_AVAILABLE = True
 except ModuleNotFoundError:
     SAGE_ATTN_AVAILABLE = False
-    
-    
+
+
+# Memory-efficient chunked attention for systems without flash_attn or sage_attn
+# Based on "Self-attention Does Not Need O(n²) Memory" (https://arxiv.org/abs/2112.05682)
+def chunked_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, chunk_size: int = 1024):
+    """
+    Memory-efficient attention that processes queries in chunks.
+    q, k, v: [batch, heads, seq_len, head_dim]
+    Returns: [batch, heads, seq_len, head_dim]
+    """
+    batch, heads, seq_len, head_dim = q.shape
+    scale = head_dim ** -0.5
+
+    # If sequence is small enough, use standard attention
+    if seq_len <= chunk_size:
+        return F.scaled_dot_product_attention(q, k, v)
+
+    # Process queries in chunks
+    output = torch.zeros_like(q)
+
+    for i in range(0, seq_len, chunk_size):
+        end_i = min(i + chunk_size, seq_len)
+        q_chunk = q[:, :, i:end_i, :]
+
+        # Compute attention for this chunk against all keys
+        # Using numerically stable chunked softmax
+        chunk_output = torch.zeros_like(q_chunk)
+        chunk_max = torch.full((batch, heads, end_i - i, 1), float('-inf'), device=q.device, dtype=q.dtype)
+        chunk_sum = torch.zeros((batch, heads, end_i - i, 1), device=q.device, dtype=q.dtype)
+
+        for j in range(0, seq_len, chunk_size):
+            end_j = min(j + chunk_size, seq_len)
+            k_chunk = k[:, :, j:end_j, :]
+            v_chunk = v[:, :, j:end_j, :]
+
+            # Compute attention scores for this key chunk
+            attn_scores = torch.matmul(q_chunk, k_chunk.transpose(-2, -1)) * scale
+
+            # Update running max and sum for numerical stability
+            new_max = torch.maximum(chunk_max, attn_scores.max(dim=-1, keepdim=True).values)
+
+            # Rescale previous sum and output
+            exp_old = torch.exp(chunk_max - new_max)
+            chunk_sum = chunk_sum * exp_old
+            chunk_output = chunk_output * exp_old
+
+            # Add contribution from this key chunk
+            exp_scores = torch.exp(attn_scores - new_max)
+            chunk_sum = chunk_sum + exp_scores.sum(dim=-1, keepdim=True)
+            chunk_output = chunk_output + torch.matmul(exp_scores, v_chunk)
+
+            chunk_max = new_max
+
+        # Normalize
+        output[:, :, i:end_i, :] = chunk_output / chunk_sum
+
+    return output
+
+
 def flash_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, num_heads: int, compatibility_mode=False):
     if compatibility_mode:
         q = rearrange(q, "b s (n d) -> b n s d", n=num_heads)
@@ -52,10 +109,11 @@ def flash_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, num_heads
         x = sageattn(q, k, v)
         x = rearrange(x, "b n s d -> b s (n d)", n=num_heads)
     else:
+        # Use chunked attention for memory efficiency on systems without flash_attn/sage_attn
         q = rearrange(q, "b s (n d) -> b n s d", n=num_heads)
         k = rearrange(k, "b s (n d) -> b n s d", n=num_heads)
         v = rearrange(v, "b s (n d) -> b n s d", n=num_heads)
-        x = F.scaled_dot_product_attention(q, k, v)
+        x = chunked_attention(q, k, v, chunk_size=2048)
         x = rearrange(x, "b n s d -> b s (n d)", n=num_heads)
     return x
 
