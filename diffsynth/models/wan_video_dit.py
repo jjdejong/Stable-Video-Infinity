@@ -23,10 +23,11 @@ try:
 except ModuleNotFoundError:
     SAGE_ATTN_AVAILABLE = False
 
-# Try to use ComfyUI's optimized attention (for when running in ComfyUI environment)
+# Try to use ComfyUI's memory-efficient sub-quadratic attention
 COMFY_ATTENTION_AVAILABLE = False
+comfy_sub_quad_attention = None
 try:
-    from comfy.ldm.modules.attention import optimized_attention as comfy_optimized_attention
+    from comfy.ldm.modules.attention import attention_sub_quad as comfy_sub_quad_attention
     COMFY_ATTENTION_AVAILABLE = True
 except (ModuleNotFoundError, ImportError):
     # Try adding ComfyUI to path (for standalone script usage)
@@ -41,7 +42,7 @@ except (ModuleNotFoundError, ImportError):
             if path not in sys.path:
                 sys.path.insert(0, path)
             try:
-                from comfy.ldm.modules.attention import optimized_attention as comfy_optimized_attention
+                from comfy.ldm.modules.attention import attention_sub_quad as comfy_sub_quad_attention
                 COMFY_ATTENTION_AVAILABLE = True
                 break
             except (ModuleNotFoundError, ImportError):
@@ -135,10 +136,10 @@ def flash_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, num_heads
         v = rearrange(v, "b s (n d) -> b n s d", n=num_heads)
         x = sageattn(q, k, v)
         x = rearrange(x, "b n s d -> b s (n d)", n=num_heads)
-    elif COMFY_ATTENTION_AVAILABLE:
-        # Use ComfyUI's optimized attention (memory-efficient, works on AMD)
+    elif COMFY_ATTENTION_AVAILABLE and comfy_sub_quad_attention is not None:
+        # Use ComfyUI's sub-quadratic attention (memory-efficient, works on AMD)
         # ComfyUI expects [batch, seq, heads*dim] input format
-        x = comfy_optimized_attention(q, k, v, heads=num_heads)
+        x = comfy_sub_quad_attention(q, k, v, heads=num_heads)
     else:
         # Use chunked attention for memory efficiency on systems without flash_attn/sage_attn
         q = rearrange(q, "b s (n d) -> b n s d", n=num_heads)
