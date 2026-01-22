@@ -26,6 +26,7 @@ class StreamingVideoProcessor:
         num_motion_latent=2,
         num_overlap_frame=1,
         cfg_scale=5.0,
+        num_inference_steps=20,
         dtype=torch.float16,
     ):
         self.comfyui_models_path = comfyui_models_path
@@ -48,6 +49,7 @@ class StreamingVideoProcessor:
         self.num_motion_latent = num_motion_latent
         self.num_overlap_frame = num_overlap_frame
         self.cfg_scale = cfg_scale
+        self.num_inference_steps = num_inference_steps
 
     def initialize_pipeline(self):
         """Initialize the WanVideo pipeline with local ComfyUI models"""
@@ -160,6 +162,7 @@ class StreamingVideoProcessor:
                 width=self.width,
                 input_image=current_input_image,
                 num_frames=self.frames_per_clip,
+                num_inference_steps=self.num_inference_steps,
                 anchor=input_image,
                 prev_last_latent=prev_last_latent,
                 num_motion_latent=self.num_motion_latent,
@@ -299,6 +302,7 @@ def main():
     parser.add_argument("--num_motion_frame", type=int, default=4)
     parser.add_argument("--num_motion_latent", type=int, default=1)
     parser.add_argument("--cfg_scale", type=float, default=5.0)
+    parser.add_argument("--num_inference_steps", type=int, default=20, help="Number of denoising steps (20-30 without LightX2V, 4-8 with)")
     parser.add_argument(
         "--dtype",
         type=str,
@@ -344,6 +348,7 @@ def main():
         num_motion_latent=args.num_motion_latent,
         num_overlap_frame=args.num_overlap_frame,
         cfg_scale=args.cfg_scale,
+        num_inference_steps=args.num_inference_steps,
         dtype=dtype,
     )
 
