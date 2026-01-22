@@ -49,6 +49,13 @@ wan_series = [
         "model_class": "diffsynth.models.wan_video_text_encoder.WanTextEncoder",
     },
     {
+        # ComfyUI format: umt5_xxl_fp16.safetensors (HuggingFace T5 format)
+        "model_hash": "64a62390163f2ce2bbc8da48e9803849",
+        "model_name": "wan_video_text_encoder",
+        "model_class": "diffsynth.models.wan_video_text_encoder.WanTextEncoder",
+        "state_dict_converter": "diffsynth.utils.state_dict_converters.wan_video_text_encoder.WanVideoTextEncoderStateDictConverter",
+    },
+    {
         # Example: ModelConfig(model_id="Wan-AI/Wan2.1-T2V-14B", origin_file_pattern="Wan2.1_VAE.pth")
         "model_hash": "ccc42284ea13e1ad04693284c7a09be6",
         "model_name": "wan_video_vae",
