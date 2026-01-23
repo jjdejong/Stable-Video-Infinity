@@ -9,6 +9,8 @@ import numpy as np
 import os
 import argparse
 import ast
+import json
+from datetime import datetime
 from diffsynth.utils.data import save_video
 from diffsynth.pipelines.wan_video_svi_pro import WanVideoSviProPipeline, ModelConfig
 
@@ -106,6 +108,45 @@ class StreamingVideoProcessor:
             self.pipe.load_lora(self.pipe.dit2, lora_path, alpha=alpha)
 
         print("Pipeline initialized successfully!")
+
+    def save_params(self, output_path, input_image_path, prompt_path, prompts_used):
+        """Save generation parameters to a JSON file alongside the video"""
+        params = {
+            "timestamp": datetime.now().isoformat(),
+            "input_image": os.path.abspath(input_image_path),
+            "prompt_file": os.path.abspath(prompt_path),
+            "prompts": prompts_used,
+            "generation": {
+                "num_clips": self.num_clips,
+                "frames_per_clip": self.frames_per_clip,
+                "height": self.height,
+                "width": self.width,
+                "fps": self.fps,
+            },
+            "sampling": {
+                "num_inference_steps": self.num_inference_steps,
+                "cfg_scale": self.cfg_scale,
+                "sigma_shift": self.sigma_shift,
+                "switch_dit_boundary": self.switch_dit_boundary,
+                "seed_multiplier": self.seed_multiplier,
+            },
+            "motion": {
+                "num_motion_latent": self.num_motion_latent,
+                "num_motion_frame": self.num_motion_frame,
+                "num_overlap_frame": self.num_overlap_frame,
+            },
+            "loras": {
+                "high_noise": self.lora_path_high,
+                "low_noise": self.lora_path_low,
+                "extra_high": self.extra_loras_high,
+                "extra_low": self.extra_loras_low,
+            },
+            "dtype": str(self.dtype),
+        }
+        params_path = os.path.splitext(output_path)[0] + "_params.json"
+        with open(params_path, 'w', encoding='utf-8') as f:
+            json.dump(params, f, indent=2, ensure_ascii=False)
+        print(f"Parameters saved: {params_path}")
 
     def load_prompts_from_file(self, prompt_file_path):
         """Load prompts from a text file containing a Python list"""
@@ -210,6 +251,9 @@ class StreamingVideoProcessor:
         print(f"\nSaving final video with {len(all_video_frames)} frames...")
         save_video(all_video_frames, final_output, fps=self.fps, quality=5)
         print(f"Final video saved: {final_output}")
+
+        # Save parameters
+        self.save_params(final_output, input_image_path, prompt_path, prompts[:num_clips])
 
         return final_output
 
