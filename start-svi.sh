@@ -38,6 +38,30 @@
 #   --lora_path_low PATH       Low noise SVI LoRA (default: wan/SVI_..._low_noise_..._v2.0_pro.safetensors)
 #   --extra_loras_high STR     Additional LoRAs for high-noise model (format: "path:alpha,path:alpha")
 #   --extra_loras_low STR      Additional LoRAs for low-noise model (format: "path:alpha,path:alpha")
+#
+# Keyframe images (for camera zoom/composition changes):
+#   --keyframes PATH           JSON file defining reference images per clip range
+#
+#   Since Wan 2.2 doesn't follow zoom/camera instructions well, provide high-quality
+#   reference images at different compositions. The model naturally interpolates
+#   from previous clip's motion toward each keyframe's composition.
+#
+#   Keyframes JSON format:
+#   [
+#     {"clip": 0, "image": "./wide_shot.jpg"},
+#     {"clip": 5, "image": "./medium_shot.jpg"},
+#     {"clip": 10, "image": "./closeup.jpg"}
+#   ]
+#   - clip: Clip index (0-based) where this reference image starts being used
+#   - image: Path to reference image for this keyframe
+#   - zoom: Optional auto-crop factor (1.0=full, 2.0=center 50%) - use sparingly
+#
+#   Motion continuity is preserved via latent space between clips.
+#
+# Simple auto-zoom (convenience, limited use):
+#   --zoom_start F             Starting zoom factor (default: 1.0)
+#   --zoom_end F               Ending zoom factor (default: 1.0)
+#                              Auto center-crops the reference image progressively
 
 # Change to SVI directory
 cd "$(dirname "$0")"

@@ -2,6 +2,8 @@
 """
 SVI 2.0 Pro inference script configured for local ComfyUI models.
 Uses fp16 models from ~/ComfyUI/models/
+
+Supports camera zoom effects via keyframes or linear zoom parameters.
 """
 import torch
 from PIL import Image
@@ -13,6 +15,99 @@ import json
 from datetime import datetime
 from diffsynth.utils.data import save_video
 from diffsynth.pipelines.wan_video_svi_pro import WanVideoSviProPipeline, ModelConfig
+
+
+def crop_and_resize_for_zoom(image, zoom_factor, target_width, target_height):
+    """
+    Apply zoom by center-cropping the image and resizing back to target dimensions.
+
+    Args:
+        image: PIL Image (original reference image)
+        zoom_factor: 1.0 = no zoom, 2.0 = 2x zoom (crop to 50% and resize back)
+        target_width, target_height: Output dimensions
+
+    Returns:
+        PIL Image zoomed and resized to target dimensions
+    """
+    if zoom_factor <= 1.0:
+        return image.resize((target_width, target_height))
+
+    orig_width, orig_height = image.size
+
+    # Calculate crop region (center crop)
+    crop_width = orig_width / zoom_factor
+    crop_height = orig_height / zoom_factor
+
+    left = (orig_width - crop_width) / 2
+    top = (orig_height - crop_height) / 2
+    right = left + crop_width
+    bottom = top + crop_height
+
+    # Crop and resize
+    cropped = image.crop((int(left), int(top), int(right), int(bottom)))
+    return cropped.resize((target_width, target_height), Image.LANCZOS)
+
+
+def interpolate_zoom(clip_idx, keyframes, num_clips):
+    """
+    Get zoom factor and image path for a given clip index based on keyframes.
+
+    For image-based keyframes: the image persists until the next keyframe.
+    For zoom-based keyframes: zoom interpolates linearly between keyframes.
+
+    Args:
+        clip_idx: Current clip index (0-based)
+        keyframes: List of {"clip": int, "image": str} and/or {"clip": int, "zoom": float}
+        num_clips: Total number of clips
+
+    Returns:
+        (zoom_factor, image_path or None)
+    """
+    if not keyframes:
+        return 1.0, None
+
+    # Sort keyframes by clip index
+    sorted_kf = sorted(keyframes, key=lambda x: x.get("clip", 0))
+
+    # Find the active keyframe (most recent one at or before clip_idx)
+    active_kf = None
+    next_kf = None
+
+    for kf in sorted_kf:
+        if kf.get("clip", 0) <= clip_idx:
+            active_kf = kf
+        elif next_kf is None:
+            next_kf = kf
+
+    # Determine image path - use active keyframe's image if it has one
+    image_path = None
+    if active_kf and "image" in active_kf:
+        image_path = active_kf["image"]
+
+    # Determine zoom factor
+    if active_kf is None:
+        # Before first keyframe
+        return 1.0, image_path
+
+    active_zoom = active_kf.get("zoom", 1.0)
+
+    # If no next keyframe or next has no zoom, use active zoom
+    if next_kf is None or "zoom" not in next_kf:
+        return active_zoom, image_path
+
+    # Interpolate zoom between active and next keyframe
+    active_clip = active_kf.get("clip", 0)
+    next_clip = next_kf.get("clip", num_clips - 1)
+    next_zoom = next_kf.get("zoom", 1.0)
+
+    if next_clip == active_clip:
+        return active_zoom, image_path
+
+    # Linear interpolation
+    t = (clip_idx - active_clip) / (next_clip - active_clip)
+    zoom = active_zoom + t * (next_zoom - active_zoom)
+
+    return zoom, image_path
 
 
 class StreamingVideoProcessor:
@@ -32,6 +127,9 @@ class StreamingVideoProcessor:
         sigma_shift=8.0,
         switch_dit_boundary=0.90,
         dtype=torch.float16,
+        keyframes=None,
+        zoom_start=1.0,
+        zoom_end=1.0,
     ):
         self.comfyui_models_path = comfyui_models_path
         self.lora_path_high = lora_path_high
@@ -56,6 +154,11 @@ class StreamingVideoProcessor:
         self.num_inference_steps = num_inference_steps
         self.sigma_shift = sigma_shift
         self.switch_dit_boundary = switch_dit_boundary
+
+        # Zoom/keyframe configuration
+        self.keyframes = keyframes or []
+        self.zoom_start = zoom_start
+        self.zoom_end = zoom_end
 
     def initialize_pipeline(self):
         """Initialize the WanVideo pipeline with local ComfyUI models"""
@@ -109,7 +212,7 @@ class StreamingVideoProcessor:
 
         print("Pipeline initialized successfully!")
 
-    def save_params(self, output_path, input_image_path, prompt_path, prompts_used):
+    def save_params(self, output_path, input_image_path, prompt_path, prompts_used, zoom_per_clip=None):
         """Save generation parameters to a JSON file alongside the video"""
         params = {
             "timestamp": datetime.now().isoformat(),
@@ -141,6 +244,12 @@ class StreamingVideoProcessor:
                 "extra_high": self.extra_loras_high,
                 "extra_low": self.extra_loras_low,
             },
+            "zoom": {
+                "zoom_start": self.zoom_start,
+                "zoom_end": self.zoom_end,
+                "keyframes": self.keyframes,
+                "zoom_per_clip": zoom_per_clip or [],
+            },
             "dtype": str(self.dtype),
         }
         params_path = os.path.splitext(output_path)[0] + "_params.json"
@@ -166,8 +275,27 @@ class StreamingVideoProcessor:
             print(f"Error loading prompts from {prompt_file_path}: {e}")
             return []
 
+    def get_zoom_for_clip(self, clip_idx, num_clips):
+        """
+        Get zoom factor for a clip, using keyframes or linear interpolation.
+
+        Returns:
+            (zoom_factor, keyframe_image_path or None)
+        """
+        # If keyframes are defined, use them
+        if self.keyframes:
+            return interpolate_zoom(clip_idx, self.keyframes, num_clips)
+
+        # Otherwise use linear interpolation between zoom_start and zoom_end
+        if num_clips <= 1:
+            return self.zoom_start, None
+
+        t = clip_idx / (num_clips - 1)
+        zoom = self.zoom_start + t * (self.zoom_end - self.zoom_start)
+        return zoom, None
+
     def generate_streaming_video(self, input_image_path, prompt_path, output_dir):
-        """Generate streaming video using multiple prompts"""
+        """Generate streaming video using multiple prompts with optional zoom effects"""
         sample_name = os.path.splitext(os.path.basename(input_image_path))[0]
         print(f"\nProcessing sample: {sample_name}")
 
@@ -184,19 +312,56 @@ class StreamingVideoProcessor:
 
         print(f"Number of prompts: {len(prompts)}")
 
-        # Load input image
-        input_image = Image.open(input_image_path).resize((self.width, self.height))
+        # Load input image at original resolution for zoom operations
+        original_image = Image.open(input_image_path)
+        print(f"Original image size: {original_image.size}")
+
+        # Cache for keyframe images
+        keyframe_images = {}
 
         # Generate clips
         all_video_frames = []
-        current_input_image = input_image
+        current_input_image = None
+        zoom_per_clip = []
 
         num_clips = min(self.num_clips, len(prompts))
         prev_last_latent = None
 
+        # Check if zoom is enabled
+        has_zoom = self.keyframes or self.zoom_start != 1.0 or self.zoom_end != 1.0
+        if has_zoom:
+            print(f"Zoom enabled: start={self.zoom_start}, end={self.zoom_end}, keyframes={len(self.keyframes)}")
+
         for clip_idx in range(num_clips):
             print(f"\nGenerating clip {clip_idx + 1}/{num_clips}...")
             print(f"Prompt: {prompts[clip_idx][:100]}...")
+
+            # Get zoom factor and optional keyframe image for this clip
+            zoom_factor, keyframe_image_path = self.get_zoom_for_clip(clip_idx, num_clips)
+            zoom_per_clip.append({"clip": clip_idx, "zoom": zoom_factor, "keyframe_image": keyframe_image_path})
+
+            # Determine the anchor image for this clip
+            if keyframe_image_path:
+                # Use specified keyframe image
+                if keyframe_image_path not in keyframe_images:
+                    keyframe_images[keyframe_image_path] = Image.open(keyframe_image_path)
+                    print(f"Loaded keyframe image: {keyframe_image_path}")
+                anchor_source = keyframe_images[keyframe_image_path]
+            else:
+                anchor_source = original_image
+
+            # Apply zoom to anchor
+            if zoom_factor != 1.0:
+                anchor_image = crop_and_resize_for_zoom(
+                    anchor_source, zoom_factor, self.width, self.height
+                )
+                print(f"Applied zoom: {zoom_factor:.2f}x")
+            else:
+                anchor_image = anchor_source.resize((self.width, self.height))
+
+            # For first clip, use anchor as input; otherwise use last frames from previous clip
+            if current_input_image is None:
+                current_input_image = anchor_image
 
             video_clip_dict = self.pipe(
                 prompt=prompts[clip_idx],
@@ -210,7 +375,7 @@ class StreamingVideoProcessor:
                 num_inference_steps=self.num_inference_steps,
                 sigma_shift=self.sigma_shift,
                 switch_DiT_boundary=self.switch_dit_boundary,
-                anchor=input_image,
+                anchor=anchor_image,
                 prev_last_latent=prev_last_latent,
                 num_motion_latent=self.num_motion_latent,
                 cfg_scale=self.cfg_scale,
@@ -237,6 +402,7 @@ class StreamingVideoProcessor:
             else:
                 all_video_frames.extend(video_frames[self.num_overlap_frame:])
 
+            # Use last frames for motion continuity to next clip
             current_input_image = video_frames[-self.num_motion_frame:]
 
             print(f"Clip {clip_idx + 1} generated: {len(video_frames)} frames")
@@ -252,8 +418,8 @@ class StreamingVideoProcessor:
         save_video(all_video_frames, final_output, fps=self.fps, quality=5)
         print(f"Final video saved: {final_output}")
 
-        # Save parameters
-        self.save_params(final_output, input_image_path, prompt_path, prompts[:num_clips])
+        # Save parameters including zoom info
+        self.save_params(final_output, input_image_path, prompt_path, prompts[:num_clips], zoom_per_clip)
 
         return final_output
 
@@ -280,6 +446,46 @@ def parse_extra_loras(loras_str):
             alpha = 1.0
         result.append((path, alpha))
     return result
+
+
+def load_keyframes(keyframes_path):
+    """
+    Load keyframes from a JSON file.
+
+    Keyframes allow changing the reference/anchor image at specific clips to achieve
+    composition changes (e.g., wide shot -> medium -> close-up) that Wan 2.2 doesn't
+    follow well from prompt instructions alone.
+
+    Expected format (list):
+    [
+        {"clip": 0, "image": "./wide_shot.jpg"},
+        {"clip": 5, "image": "./medium_shot.jpg"},
+        {"clip": 10, "image": "./closeup.jpg"}
+    ]
+
+    Or wrapped format:
+    {
+        "keyframes": [...]
+    }
+
+    Fields:
+        clip: Clip index (0-based) where this reference image starts being used
+        image: Path to high-quality reference image at desired composition
+        zoom: Optional auto-crop factor (1.0=full, 2.0=center 50%) - prefer providing actual images
+    """
+    if not keyframes_path or not os.path.exists(keyframes_path):
+        return []
+
+    with open(keyframes_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    if isinstance(data, list):
+        return data
+    elif isinstance(data, dict) and "keyframes" in data:
+        return data["keyframes"]
+    else:
+        print(f"Warning: Invalid keyframes format in {keyframes_path}")
+        return []
 
 
 def main():
@@ -363,6 +569,27 @@ def main():
         help="Model dtype"
     )
 
+    # Keyframe images for composition/zoom changes
+    parser.add_argument(
+        "--keyframes",
+        type=str,
+        default="",
+        help="JSON file with keyframe images for composition changes (e.g., wide->medium->closeup)"
+    )
+    # Simple auto-zoom (convenience feature, limited use)
+    parser.add_argument(
+        "--zoom_start",
+        type=float,
+        default=1.0,
+        help="Auto-crop zoom start (1.0=full, 2.0=center 50%%). Prefer --keyframes with actual images"
+    )
+    parser.add_argument(
+        "--zoom_end",
+        type=float,
+        default=1.0,
+        help="Auto-crop zoom end. Interpolates linearly across clips"
+    )
+
     args = parser.parse_args()
 
     # Resolve LoRA paths
@@ -388,6 +615,9 @@ def main():
 
     os.makedirs(args.output_root, exist_ok=True)
 
+    # Load keyframes if specified
+    keyframes = load_keyframes(args.keyframes) if args.keyframes else []
+
     # Initialize processor
     processor = StreamingVideoProcessor(
         comfyui_models_path=args.comfyui_models,
@@ -404,6 +634,9 @@ def main():
         sigma_shift=args.sigma_shift,
         switch_dit_boundary=args.switch_dit_boundary,
         dtype=dtype,
+        keyframes=keyframes,
+        zoom_start=args.zoom_start,
+        zoom_end=args.zoom_end,
     )
 
     processor.frames_per_clip = args.frames_per_clip
