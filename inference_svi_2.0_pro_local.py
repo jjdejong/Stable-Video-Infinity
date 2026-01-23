@@ -27,8 +27,8 @@ class StreamingVideoProcessor:
         num_overlap_frame=1,
         cfg_scale=5.0,
         num_inference_steps=20,
-        sigma_shift=5.0,
-        switch_dit_boundary=0.875,
+        sigma_shift=8.0,
+        switch_dit_boundary=0.90,
         dtype=torch.float16,
     ):
         self.comfyui_models_path = comfyui_models_path
@@ -309,8 +309,8 @@ def main():
     parser.add_argument("--num_motion_latent", type=int, default=1)
     parser.add_argument("--cfg_scale", type=float, default=5.0)
     parser.add_argument("--num_inference_steps", type=int, default=20, help="Number of denoising steps (20-30 without LightX2V, 4-8 with)")
-    parser.add_argument("--sigma_shift", type=float, default=5.0, help="Scheduler sigma shift (default: 5.0)")
-    parser.add_argument("--switch_dit_boundary", type=float, default=0.875, help="Boundary for switching HIGH->LOW noise model (0.0-1.0, default: 0.875 = 87.5%% through denoising)")
+    parser.add_argument("--sigma_shift", type=float, default=8.0, help="Scheduler sigma shift (default: 8.0 for normal, 5.0 for LightX2V)")
+    parser.add_argument("--switch_dit_boundary", type=float, default=0.90, help="Boundary for switching HIGH->LOW noise model (0.0-1.0, default: 0.90 for I2V, 0.875 for T2V)")
     parser.add_argument(
         "--dtype",
         type=str,
