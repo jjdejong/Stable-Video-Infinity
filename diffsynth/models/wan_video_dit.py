@@ -23,30 +23,35 @@ try:
 except ModuleNotFoundError:
     SAGE_ATTN_AVAILABLE = False
 
+# Check for forced attention implementation via environment variable
+import os
+DIFFSYNTH_ATTENTION = os.environ.get('DIFFSYNTH_ATTENTION_IMPLEMENTATION', '').lower()
+USE_SDPA = DIFFSYNTH_ATTENTION == 'sdpa'
+
 # Try to use ComfyUI's memory-efficient sub-quadratic attention
 COMFY_ATTENTION_AVAILABLE = False
 comfy_sub_quad_attention = None
-try:
-    from comfy.ldm.modules.attention import attention_sub_quad as comfy_sub_quad_attention
-    COMFY_ATTENTION_AVAILABLE = True
-except (ModuleNotFoundError, ImportError):
-    # Try adding ComfyUI to path (for standalone script usage)
-    import sys
-    import os
-    comfyui_paths = [
-        os.path.expanduser("~/ComfyUI"),
-        os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."),  # If inside ComfyUI/custom_nodes
-    ]
-    for path in comfyui_paths:
-        if os.path.exists(os.path.join(path, "comfy")):
-            if path not in sys.path:
-                sys.path.insert(0, path)
-            try:
-                from comfy.ldm.modules.attention import attention_sub_quad as comfy_sub_quad_attention
-                COMFY_ATTENTION_AVAILABLE = True
-                break
-            except (ModuleNotFoundError, ImportError):
-                continue
+if not USE_SDPA:  # Skip ComfyUI import if forcing sdpa
+    try:
+        from comfy.ldm.modules.attention import attention_sub_quad as comfy_sub_quad_attention
+        COMFY_ATTENTION_AVAILABLE = True
+    except (ModuleNotFoundError, ImportError):
+        # Try adding ComfyUI to path (for standalone script usage)
+        import sys
+        comfyui_paths = [
+            os.path.expanduser("~/ComfyUI"),
+            os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."),  # If inside ComfyUI/custom_nodes
+        ]
+        for path in comfyui_paths:
+            if os.path.exists(os.path.join(path, "comfy")):
+                if path not in sys.path:
+                    sys.path.insert(0, path)
+                try:
+                    from comfy.ldm.modules.attention import attention_sub_quad as comfy_sub_quad_attention
+                    COMFY_ATTENTION_AVAILABLE = True
+                    break
+                except (ModuleNotFoundError, ImportError):
+                    continue
 
 
 # Memory-efficient chunked attention for systems without flash_attn or sage_attn
@@ -110,7 +115,9 @@ def chunked_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, chunk_s
 
 
 def flash_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, num_heads: int, compatibility_mode=False):
-    if compatibility_mode:
+    if compatibility_mode or USE_SDPA:
+        # Use PyTorch's native scaled_dot_product_attention (sdpa)
+        # On AMD ROCm, set PYTORCH_ALLOC_CONF=expandable_segments:True to avoid HIP errors
         q = rearrange(q, "b s (n d) -> b n s d", n=num_heads)
         k = rearrange(k, "b s (n d) -> b n s d", n=num_heads)
         v = rearrange(v, "b s (n d) -> b n s d", n=num_heads)

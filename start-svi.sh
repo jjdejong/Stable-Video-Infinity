@@ -57,5 +57,12 @@ export TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1
 # Fix memory fragmentation issues (prevents OOM errors)
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
+# Use PyTorch's native sdpa for attention (faster than chunked on unified memory)
+# Requires PYTORCH_ALLOC_CONF=expandable_segments:True to avoid HIP errors
+export DIFFSYNTH_ATTENTION_IMPLEMENTATION=sdpa
+
+# Suppress tokenizers parallelism warning during video save (fork after parallelism)
+export TOKENIZERS_PARALLELISM=false
+
 # Run SVI inference with all arguments passed through
 python inference_svi_2.0_pro_local.py "$@"
