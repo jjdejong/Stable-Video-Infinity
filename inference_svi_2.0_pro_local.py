@@ -27,6 +27,8 @@ class StreamingVideoProcessor:
         num_overlap_frame=1,
         cfg_scale=5.0,
         num_inference_steps=20,
+        sigma_shift=5.0,
+        switch_dit_boundary=0.875,
         dtype=torch.float16,
     ):
         self.comfyui_models_path = comfyui_models_path
@@ -50,6 +52,8 @@ class StreamingVideoProcessor:
         self.num_overlap_frame = num_overlap_frame
         self.cfg_scale = cfg_scale
         self.num_inference_steps = num_inference_steps
+        self.sigma_shift = sigma_shift
+        self.switch_dit_boundary = switch_dit_boundary
 
     def initialize_pipeline(self):
         """Initialize the WanVideo pipeline with local ComfyUI models"""
@@ -163,6 +167,8 @@ class StreamingVideoProcessor:
                 input_image=current_input_image,
                 num_frames=self.frames_per_clip,
                 num_inference_steps=self.num_inference_steps,
+                sigma_shift=self.sigma_shift,
+                switch_DiT_boundary=self.switch_dit_boundary,
                 anchor=input_image,
                 prev_last_latent=prev_last_latent,
                 num_motion_latent=self.num_motion_latent,
@@ -303,6 +309,8 @@ def main():
     parser.add_argument("--num_motion_latent", type=int, default=1)
     parser.add_argument("--cfg_scale", type=float, default=5.0)
     parser.add_argument("--num_inference_steps", type=int, default=20, help="Number of denoising steps (20-30 without LightX2V, 4-8 with)")
+    parser.add_argument("--sigma_shift", type=float, default=5.0, help="Scheduler sigma shift (default: 5.0)")
+    parser.add_argument("--switch_dit_boundary", type=float, default=0.875, help="Boundary for switching HIGH->LOW noise model (0.0-1.0, default: 0.875 = 87.5%% through denoising)")
     parser.add_argument(
         "--dtype",
         type=str,
@@ -349,6 +357,8 @@ def main():
         num_overlap_frame=args.num_overlap_frame,
         cfg_scale=args.cfg_scale,
         num_inference_steps=args.num_inference_steps,
+        sigma_shift=args.sigma_shift,
+        switch_dit_boundary=args.switch_dit_boundary,
         dtype=dtype,
     )
 

@@ -19,8 +19,14 @@
 # Sampling:
 #   --num_inference_steps N    Denoising steps: 20-30 normal, 4-8 with LightX2V (default: 20)
 #   --cfg_scale F              Classifier-free guidance scale (default: 5.0)
+#   --sigma_shift F            Scheduler sigma shift (default: 5.0)
+#   --switch_dit_boundary F    HIGH->LOW model switch point 0.0-1.0 (default: 0.875 = 87.5%)
 #   --seed_multiplier N        Seed = clip_idx * multiplier (default: 42)
 #   --dtype {fp16,bf16}        Model precision (default: fp16)
+#
+# LightX2V hybrid example (14 steps, LightX2V only on LOW noise model):
+#   ./start-svi.sh --num_inference_steps 14 --switch_dit_boundary 0.5 \
+#     --extra_loras_low "Wan22_Lightx2v/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors:1.0" ...
 #
 # Motion continuity:
 #   --num_motion_latent N      Latent frames passed between clips (default: 1)
