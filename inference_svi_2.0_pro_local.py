@@ -4,6 +4,7 @@ SVI 2.0 Pro inference script configured for local ComfyUI models.
 Uses fp16 models from ~/ComfyUI/models/
 
 Supports camera zoom effects via keyframes or linear zoom parameters.
+Supports resume functionality to continue interrupted generations.
 """
 import torch
 from PIL import Image
@@ -12,9 +13,22 @@ import os
 import argparse
 import ast
 import json
+import glob
+import re
 from datetime import datetime
 from diffsynth.utils.data import save_video
 from diffsynth.pipelines.wan_video_svi_pro import WanVideoSviProPipeline, ModelConfig
+import imageio
+
+
+def load_video_frames(video_path):
+    """Load video frames from a video file as PIL Images."""
+    reader = imageio.get_reader(video_path)
+    frames = []
+    for frame in reader:
+        frames.append(Image.fromarray(frame))
+    reader.close()
+    return frames
 
 
 def crop_and_resize_for_zoom(image, zoom_factor, target_width, target_height):
@@ -130,6 +144,7 @@ class StreamingVideoProcessor:
         keyframes=None,
         zoom_start=1.0,
         zoom_end=1.0,
+        resume=False,
     ):
         self.comfyui_models_path = comfyui_models_path
         self.lora_path_high = lora_path_high
@@ -159,6 +174,71 @@ class StreamingVideoProcessor:
         self.keyframes = keyframes or []
         self.zoom_start = zoom_start
         self.zoom_end = zoom_end
+
+        # Resume functionality
+        self.resume = resume
+
+    def find_existing_clips(self, output_dir, sample_name):
+        """
+        Find existing intermediate clips in the output directory.
+        Returns a sorted list of (clip_index, video_path) tuples.
+        """
+        pattern = os.path.join(output_dir, f"{sample_name}_clip_*.mp4")
+        existing_files = glob.glob(pattern)
+
+        clips = []
+        for filepath in existing_files:
+            basename = os.path.basename(filepath)
+            # Extract clip number from filename like "sample_clip_5.mp4"
+            match = re.search(r'_clip_(\d+)\.mp4$', basename)
+            if match:
+                clip_num = int(match.group(1))
+                clips.append((clip_num, filepath))
+
+        return sorted(clips, key=lambda x: x[0])
+
+    def load_resume_state(self, output_dir, sample_name, last_clip_num):
+        """
+        Load state from the last generated clip for resuming.
+
+        Returns:
+            (all_video_frames, current_input_image, prev_last_latent, resume_clip_idx)
+            or (None, None, None, 0) if resume not possible
+        """
+        last_video_path = os.path.join(output_dir, f"{sample_name}_clip_{last_clip_num}.mp4")
+        latent_path = os.path.join(output_dir, f"{sample_name}_clip_{last_clip_num}_latent.pt")
+
+        if not os.path.exists(last_video_path):
+            print(f"Resume video not found: {last_video_path}")
+            return None, None, None, 0
+
+        print(f"Loading existing video for resume: {last_video_path}")
+
+        # Load the video frames as PIL Images
+        try:
+            all_video_frames = load_video_frames(last_video_path)
+            print(f"Loaded {len(all_video_frames)} frames from previous generation")
+        except Exception as e:
+            print(f"Error loading video: {e}")
+            return None, None, None, 0
+
+        # Get last frames for motion continuity
+        current_input_image = all_video_frames[-self.num_motion_frame:]
+
+        # Try to load saved latent
+        prev_last_latent = None
+        if os.path.exists(latent_path):
+            try:
+                prev_last_latent = torch.load(latent_path, weights_only=True)
+                print(f"Loaded saved latent from: {latent_path}")
+            except Exception as e:
+                print(f"Warning: Could not load latent ({e}), will re-encode frames")
+
+        # If no saved latent, we'll proceed without it (some quality loss at resume point)
+        if prev_last_latent is None:
+            print("Note: No saved latent available. Motion continuity may be slightly affected at resume point.")
+
+        return all_video_frames, current_input_image, prev_last_latent, last_clip_num
 
     def initialize_pipeline(self):
         """Initialize the WanVideo pipeline with local ComfyUI models"""
@@ -294,16 +374,34 @@ class StreamingVideoProcessor:
         zoom = self.zoom_start + t * (self.zoom_end - self.zoom_start)
         return zoom, None
 
+    def _get_keyframe_for_clip0(self):
+        """Check if keyframes define an image for clip 0."""
+        for kf in self.keyframes:
+            if kf.get("clip", -1) == 0 and "image" in kf:
+                return kf["image"]
+        return None
+
     def generate_streaming_video(self, input_image_path, prompt_path, output_dir):
         """Generate streaming video using multiple prompts with optional zoom effects"""
-        sample_name = os.path.splitext(os.path.basename(input_image_path))[0]
-        print(f"\nProcessing sample: {sample_name}")
+        # Check if keyframes cover clip 0 (makes ref_image_path optional)
+        clip0_keyframe = self._get_keyframe_for_clip0()
+        has_ref_image = input_image_path and os.path.exists(input_image_path)
 
-        if not os.path.exists(input_image_path):
-            print(f"Warning: Input image not found: {input_image_path}")
+        if not has_ref_image and not clip0_keyframe:
+            print(f"Error: No reference image provided and no keyframe for clip 0")
+            print(f"  Either provide --ref_image_path or add a keyframe with clip: 0")
             return
 
-        print(f"Input image: {input_image_path}")
+        # Derive sample name from ref image or first keyframe
+        if has_ref_image:
+            sample_name = os.path.splitext(os.path.basename(input_image_path))[0]
+            print(f"\nProcessing sample: {sample_name}")
+            print(f"Input image: {input_image_path}")
+        else:
+            sample_name = os.path.splitext(os.path.basename(clip0_keyframe))[0]
+            print(f"\nProcessing sample: {sample_name} (from keyframe)")
+            print(f"Using keyframe for clip 0: {clip0_keyframe}")
+
         prompts = self.load_prompts_from_file(prompt_path)
 
         if not prompts:
@@ -312,9 +410,11 @@ class StreamingVideoProcessor:
 
         print(f"Number of prompts: {len(prompts)}")
 
-        # Load input image at original resolution for zoom operations
-        original_image = Image.open(input_image_path)
-        print(f"Original image size: {original_image.size}")
+        # Load input image only if needed (not overridden by keyframes for all clips)
+        original_image = None
+        if has_ref_image:
+            original_image = Image.open(input_image_path)
+            print(f"Original image size: {original_image.size}")
 
         # Cache for keyframe images
         keyframe_images = {}
@@ -326,13 +426,44 @@ class StreamingVideoProcessor:
 
         num_clips = min(self.num_clips, len(prompts))
         prev_last_latent = None
+        start_clip_idx = 0
+
+        # Check for resume
+        if self.resume:
+            existing_clips = self.find_existing_clips(output_dir, sample_name)
+            if existing_clips:
+                last_clip_num, last_video_path = existing_clips[-1]
+                print(f"\nResume mode: Found {len(existing_clips)} existing clips (up to clip {last_clip_num})")
+
+                if last_clip_num >= num_clips:
+                    print(f"All {num_clips} clips already generated. Nothing to resume.")
+                    return os.path.join(output_dir, f"{sample_name}_streaming_final.mp4")
+
+                resume_result = self.load_resume_state(output_dir, sample_name, last_clip_num)
+                all_video_frames, current_input_image, prev_last_latent, completed_clips = resume_result
+
+                if all_video_frames is not None:
+                    start_clip_idx = completed_clips
+                    print(f"Will generate clip {start_clip_idx + 1} next (clips 1-{completed_clips} already done)")
+                    print(f"Loaded {len(all_video_frames)} frames from previous run")
+
+                    # Reconstruct zoom_per_clip for already generated clips
+                    for clip_idx in range(start_clip_idx):
+                        zoom_factor, keyframe_image_path = self.get_zoom_for_clip(clip_idx, num_clips)
+                        zoom_per_clip.append({"clip": clip_idx, "zoom": zoom_factor, "keyframe_image": keyframe_image_path})
+                else:
+                    print("Resume failed, starting from scratch")
+                    start_clip_idx = 0
+                    all_video_frames = []
+            else:
+                print("Resume mode enabled but no existing clips found. Starting fresh.")
 
         # Check if zoom is enabled
         has_zoom = self.keyframes or self.zoom_start != 1.0 or self.zoom_end != 1.0
         if has_zoom:
             print(f"Zoom enabled: start={self.zoom_start}, end={self.zoom_end}, keyframes={len(self.keyframes)}")
 
-        for clip_idx in range(num_clips):
+        for clip_idx in range(start_clip_idx, num_clips):
             print(f"\nGenerating clip {clip_idx + 1}/{num_clips}...")
             print(f"Prompt: {prompts[clip_idx][:100]}...")
 
@@ -347,8 +478,11 @@ class StreamingVideoProcessor:
                     keyframe_images[keyframe_image_path] = Image.open(keyframe_image_path)
                     print(f"Loaded keyframe image: {keyframe_image_path}")
                 anchor_source = keyframe_images[keyframe_image_path]
-            else:
+            elif original_image is not None:
                 anchor_source = original_image
+            else:
+                print(f"Error: No image available for clip {clip_idx} (no keyframe and no ref_image)")
+                return
 
             # Apply zoom to anchor
             if zoom_factor != 1.0:
@@ -407,10 +541,16 @@ class StreamingVideoProcessor:
 
             print(f"Clip {clip_idx + 1} generated: {len(video_frames)} frames")
 
-            # Save intermediate
+            # Save intermediate video
             intermediate_output = os.path.join(output_dir, f"{sample_name}_clip_{clip_idx + 1}.mp4")
             save_video(all_video_frames, intermediate_output, fps=self.fps, quality=7)
             print(f"Saved intermediate: {intermediate_output} ({len(all_video_frames)} frames)")
+
+            # Save latent for potential resume (enables motion continuity on resume)
+            if prev_last_latent is not None:
+                latent_path = os.path.join(output_dir, f"{sample_name}_clip_{clip_idx + 1}_latent.pt")
+                torch.save(prev_last_latent, latent_path)
+                print(f"Saved latent: {latent_path}")
 
         # Save final
         final_output = os.path.join(output_dir, f"{sample_name}_streaming_final.mp4")
@@ -537,8 +677,8 @@ def main():
     parser.add_argument(
         "--ref_image_path",
         type=str,
-        default="./data/toy_test/frame.jpg",
-        help="Path to reference image"
+        default="",
+        help="Path to reference image. Optional if --keyframes provides an image for clip 0."
     )
     parser.add_argument(
         "--prompt_path",
@@ -590,6 +730,13 @@ def main():
         help="Auto-crop zoom end. Interpolates linearly across clips"
     )
 
+    # Resume functionality
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from last completed clip if interrupted. Looks for existing *_clip_N.mp4 files in output directory."
+    )
+
     args = parser.parse_args()
 
     # Resolve LoRA paths
@@ -637,6 +784,7 @@ def main():
         keyframes=keyframes,
         zoom_start=args.zoom_start,
         zoom_end=args.zoom_end,
+        resume=args.resume,
     )
 
     processor.frames_per_clip = args.frames_per_clip

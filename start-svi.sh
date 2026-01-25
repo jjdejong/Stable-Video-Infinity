@@ -6,7 +6,7 @@
 # Arguments:
 #   --comfyui_models PATH      ComfyUI models directory (default: ~/ComfyUI/models)
 #   --output_root PATH         Output directory (default: ./output)
-#   --ref_image_path PATH      Reference/anchor image
+#   --ref_image_path PATH      Reference/anchor image (optional if keyframes covers clip 0)
 #   --prompt_path PATH         Text file with prompts list
 #
 # Generation:
@@ -56,12 +56,27 @@
 #   - image: Path to reference image for this keyframe
 #   - zoom: Optional auto-crop factor (1.0=full, 2.0=center 50%) - use sparingly
 #
+#   If clip 0 has a keyframe image, --ref_image_path becomes optional.
 #   Motion continuity is preserved via latent space between clips.
 #
 # Simple auto-zoom (convenience, limited use):
 #   --zoom_start F             Starting zoom factor (default: 1.0)
 #   --zoom_end F               Ending zoom factor (default: 1.0)
 #                              Auto center-crops the reference image progressively
+#
+# Resume interrupted generation:
+#   --resume                   Continue from last completed clip
+#                              Scans output_root for existing *_clip_N.mp4 files
+#                              Loads frames and latent state from the last one
+#                              Generates remaining clips (N+1 through num_clips)
+#
+#   Each clip saves both video and latent state for optimal resume:
+#     sample_clip_N.mp4        - Accumulated video through clip N
+#     sample_clip_N_latent.pt  - Latent state for motion continuity
+#
+#   Example: Resume a 10-clip generation that stopped at clip 4:
+#     ./start-svi.sh --ref_image_path img.jpg --prompt_path prompt.txt \
+#       --num_clips 10 --output_root ./output --resume
 
 # Change to SVI directory
 cd "$(dirname "$0")"
@@ -69,8 +84,8 @@ cd "$(dirname "$0")"
 # Activate virtual environment (adjust path as needed)
 source ~/ComfyUI/venv/bin/activate
 
-# Set gfx1151 architecture override
-export HSA_OVERRIDE_GFX_VERSION=11.5.1
+# Note: Do NOT set HSA_OVERRIDE_GFX_VERSION when using gfx1151-specific PyTorch builds
+# from rocm.nightlies.amd.com/v2/gfx1151/ - they have native gfx1151 kernels
 
 # Enable Flash Attention with Triton for AMD
 export FLASH_ATTENTION_TRITON_AMD_ENABLE="TRUE"
