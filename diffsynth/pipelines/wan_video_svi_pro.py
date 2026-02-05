@@ -1154,6 +1154,9 @@ class TeaCache:
             "Wan2.1-T2V-14B": [-3.03318725e+05, 4.90537029e+04, -2.65530556e+03, 5.87365115e+01, -3.15583525e-01],
             "Wan2.1-I2V-14B-480P": [2.57151496e+05, -3.54229917e+04,  1.40286849e+03, -1.35890334e+01, 1.32517977e-01],
             "Wan2.1-I2V-14B-720P": [ 8.10705460e+03,  2.13393892e+03, -3.72934672e+02,  1.66203073e+01, -4.17769401e-02],
+            # Wan 2.2 coefficients - estimated from Wan 2.1 I2V, refine with calibrate_teacache_wan22.py
+            "Wan2.2-I2V-14B-480P": [2.57151496e+05, -3.54229917e+04,  1.40286849e+03, -1.35890334e+01, 1.32517977e-01],
+            "Wan2.2-I2V-14B-720P": [ 8.10705460e+03,  2.13393892e+03, -3.72934672e+02,  1.66203073e+01, -4.17769401e-02],
         }
         if model_id not in self.coefficients_dict:
             supported_model_ids = ", ".join([i for i in self.coefficients_dict])

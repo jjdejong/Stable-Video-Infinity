@@ -6,7 +6,7 @@
 # Arguments:
 #   --comfyui_models PATH      ComfyUI models directory (default: ~/ComfyUI/models)
 #   --output_root PATH         Output directory (default: ./output)
-#   --ref_image_path PATH      Reference/anchor image (optional if keyframes covers clip 0)
+#   --ref_image_path PATH      Reference image for first clip
 #   --prompt_path PATH         Text file with prompts list
 #
 # Generation:
@@ -17,16 +17,12 @@
 #   --fps N                    Output framerate (default: 15)
 #
 # Sampling:
-#   --num_inference_steps N    Denoising steps: 20-30 normal, 4-8 with LightX2V (default: 20)
+#   --num_inference_steps N    Denoising steps (default: 50, use 4-8 with LightX2V)
 #   --cfg_scale F              Classifier-free guidance scale (default: 5.0)
-#   --sigma_shift F            Scheduler sigma shift (default: 8.0 normal, 5.0 for LightX2V)
-#   --switch_dit_boundary F    HIGH->LOW model switch point (default: 0.90 for I2V, 0.875 for T2V)
+#   --sigma_shift F            Scheduler sigma shift (default: 5.0)
+#   --switch_dit_boundary F    HIGH->LOW model switch point (default: 0.90)
 #   --seed_multiplier N        Seed = clip_idx * multiplier (default: 42)
-#   --dtype {fp16,bf16}        Model precision (default: fp16)
-#
-# LightX2V hybrid example (14 steps, LightX2V only on LOW noise model, shift=5):
-#   ./start-svi.sh --num_inference_steps 14 --sigma_shift 5.0 \
-#     --extra_loras_low "Wan22_Lightx2v/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors:1.0" ...
+#   --dtype {fp16,bf16}        Model precision (default: bf16)
 #
 # Motion continuity:
 #   --num_motion_latent N      Latent frames passed between clips (default: 1)
@@ -34,58 +30,28 @@
 #   --num_overlap_frame N      Frames to skip when concatenating (default: 4)
 #
 # LoRAs (paths relative to comfyui_models/loras or absolute):
-#   --lora_path_high PATH      High noise SVI LoRA (default: wan/SVI_..._high_noise_..._v2.0_pro.safetensors)
-#   --lora_path_low PATH       Low noise SVI LoRA (default: wan/SVI_..._low_noise_..._v2.0_pro.safetensors)
-#   --extra_loras_high STR     Additional LoRAs for high-noise model (format: "path:alpha,path:alpha")
-#   --extra_loras_low STR      Additional LoRAs for low-noise model (format: "path:alpha,path:alpha")
-#
-# Keyframe images (for camera zoom/composition changes):
-#   --keyframes PATH           JSON file defining reference images per clip range
-#
-#   Since Wan 2.2 doesn't follow zoom/camera instructions well, provide high-quality
-#   reference images at different compositions. The model naturally interpolates
-#   from previous clip's motion toward each keyframe's composition.
-#
-#   Keyframes JSON format:
-#   [
-#     {"clip": 0, "image": "./wide_shot.jpg"},
-#     {"clip": 5, "image": "./medium_shot.jpg"},
-#     {"clip": 10, "image": "./closeup.jpg"}
-#   ]
-#   - clip: Clip index (0-based) where this reference image starts being used
-#   - image: Path to reference image for this keyframe
-#   - zoom: Optional auto-crop factor (1.0=full, 2.0=center 50%) - use sparingly
-#
-#   If clip 0 has a keyframe image, --ref_image_path becomes optional.
-#   Motion continuity is preserved via latent space between clips.
-#
-# Simple auto-zoom (convenience, limited use):
-#   --zoom_start F             Starting zoom factor (default: 1.0)
-#   --zoom_end F               Ending zoom factor (default: 1.0)
-#                              Auto center-crops the reference image progressively
+#   --lora_path_high PATH      High noise SVI LoRA
+#   --lora_path_low PATH       Low noise SVI LoRA
+#   --svi_lora_alpha_high F    SVI high-noise LoRA strength (default: 1.0)
+#   --svi_lora_alpha_low F     SVI low-noise LoRA strength (default: 1.0)
+#   --extra_loras_high STR     Additional LoRAs for high-noise model
+#   --extra_loras_low STR      Additional LoRAs for low-noise model
 #
 # Resume interrupted generation:
 #   --resume                   Continue from last completed clip
-#                              Scans output_root for existing *_clip_N.mp4 files
-#                              Loads frames and latent state from the last one
-#                              Generates remaining clips (N+1 through num_clips)
 #
-#   Each clip saves both video and latent state for optimal resume:
-#     sample_clip_N.mp4        - Accumulated video through clip N
-#     sample_clip_N_latent.pt  - Latent state for motion continuity
+# TeaCache acceleration (step-skipping):
+#   --tea_cache_l1_thresh F    TeaCache threshold (e.g., 0.05). None = disabled (default)
+#   --tea_cache_model_id STR   Model ID for coefficients (default: Wan2.2-I2V-14B-480P)
 #
-#   Example: Resume a 10-clip generation that stopped at clip 4:
-#     ./start-svi.sh --ref_image_path img.jpg --prompt_path prompt.txt \
-#       --num_clips 10 --output_root ./output --resume
+# Example:
+#   ./start-svi.sh --ref_image_path img.jpg --prompt_path prompt.txt --num_clips 5
 
 # Change to SVI directory
 cd "$(dirname "$0")"
 
-# Activate virtual environment (adjust path as needed)
+# Activate virtual environment
 source ~/ComfyUI/venv/bin/activate
-
-# Note: Do NOT set HSA_OVERRIDE_GFX_VERSION when using gfx1151-specific PyTorch builds
-# from rocm.nightlies.amd.com/v2/gfx1151/ - they have native gfx1151 kernels
 
 # Enable Flash Attention with Triton for AMD
 export FLASH_ATTENTION_TRITON_AMD_ENABLE="TRUE"
@@ -93,15 +59,14 @@ export FLASH_ATTENTION_TRITON_AMD_ENABLE="TRUE"
 # Enable experimental AOTriton optimizations for ROCm
 export TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1
 
-# Fix memory fragmentation issues (prevents OOM errors)
+# Fix memory fragmentation issues
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
-# Use PyTorch's native sdpa for attention (faster than chunked on unified memory)
-# Requires PYTORCH_ALLOC_CONF=expandable_segments:True to avoid HIP errors
+# Use PyTorch's native sdpa for attention
 export DIFFSYNTH_ATTENTION_IMPLEMENTATION=sdpa
 
-# Suppress tokenizers parallelism warning during video save (fork after parallelism)
+# Suppress tokenizers parallelism warning
 export TOKENIZERS_PARALLELISM=false
 
-# Run SVI inference with all arguments passed through
+# Run SVI inference
 python inference_svi_2.0_pro_local.py "$@"
