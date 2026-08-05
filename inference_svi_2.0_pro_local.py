@@ -69,7 +69,7 @@ class StreamingVideoProcessor:
         self.frames_per_clip = 81
         self.height = 480
         self.width = 832
-        self.fps = 15
+        self.fps = 16
         self.num_clips = 15
         self.seed_multiplier = seed_multiplier
         self.num_motion_frame = num_motion_frame
@@ -168,7 +168,7 @@ class StreamingVideoProcessor:
                 offload_device=None
             ),
             ModelConfig(
-                path=os.path.join(models_path, "text_encoders/umt5_xxl_fp16.safetensors"),
+                path=os.path.join(models_path, "text_encoders/models_t5_umt5-xxl-enc-bf16.pth"),
                 offload_device=None
             ),
             ModelConfig(
@@ -472,7 +472,8 @@ def main():
     parser.add_argument("--num_clips", type=int, default=15)
     parser.add_argument("--height", type=int, default=480)
     parser.add_argument("--width", type=int, default=832)
-    parser.add_argument("--fps", type=int, default=15)
+    parser.add_argument("--fps", type=int, default=16,
+                        help="Output framerate (default: 16, matches Wan 2.2 training fps)")
     parser.add_argument("--video_quality", type=int, default=7,
                         help="Output video quality (1-10, default: 7)")
     parser.add_argument("--frames_per_clip", type=int, default=81)
@@ -480,8 +481,8 @@ def main():
     parser.add_argument("--num_overlap_frame", type=int, default=4)
     parser.add_argument("--num_motion_frame", type=int, default=4)
     parser.add_argument("--num_motion_latent", type=int, default=1)
-    parser.add_argument("--cfg_scale", type=float, default=5.0)
-    parser.add_argument("--num_inference_steps", type=int, default=50,
+    parser.add_argument("--cfg_scale", type=float, default=4.0)
+    parser.add_argument("--num_inference_steps", type=int, default=20,
                         help="Denoising steps (default: 50, use 4-8 with LightX2V)")
     parser.add_argument("--sigma_shift", type=float, default=5.0,
                         help="Scheduler sigma shift (default: 5.0)")

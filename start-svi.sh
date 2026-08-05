@@ -14,7 +14,7 @@
 #   --frames_per_clip N        Frames per clip (default: 81)
 #   --height N                 Video height (default: 480)
 #   --width N                  Video width (default: 832)
-#   --fps N                    Output framerate (default: 15)
+#   --fps N                    Output framerate (default: 16, matches Wan 2.2 training fps)
 #
 # Sampling:
 #   --num_inference_steps N    Denoising steps (default: 50, use 4-8 with LightX2V)
@@ -59,14 +59,15 @@ export FLASH_ATTENTION_TRITON_AMD_ENABLE="TRUE"
 # Enable experimental AOTriton optimizations for ROCm
 export TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1
 
-# Fix memory fragmentation issues
-export PYTORCH_ALLOC_CONF=expandable_segments:True
-
 # Use PyTorch's native sdpa for attention
 export DIFFSYNTH_ATTENTION_IMPLEMENTATION=sdpa
 
 # Suppress tokenizers parallelism warning
 export TOKENIZERS_PARALLELISM=false
 
-# Run SVI inference
-python inference_svi_2.0_pro_local.py "$@"
+# Run SVI inference, filtering non-fatal MIOpen noise on stderr.
+# PyTorch nightlies after 2.11.0 (Jan 6 2026) bundle a newer MIOpen that tries to load
+# gfx1151 AI heuristic model files which are not yet shipped in _rocm_sdk_libraries_gfx1151.
+# MIOpen falls back to standard heuristics automatically; these are harmless warnings.
+python inference_svi_2.0_pro_local.py "$@" \
+    2> >(grep -Ev "ai_candidate_selection|ConvHipImplicitGemm3DGroupFwdXdlops|miopen_error" >&2)
